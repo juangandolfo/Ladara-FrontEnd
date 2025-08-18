@@ -1,0 +1,151 @@
+<div class="home-container">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <h1>Ladara</h1>
+    </div>
+    <div class="header-actions">
+      <button class="login-btn" (click)="login()">Inicia sesión</button>
+      <button class="cart-btn" (click)="goToCart()">
+        <button class="cart-btn" (click)="goToCart()">
+          <span class="cart-icon">🛒</span>
+          <span>Carrito</span>
+        </button>
+      </button>
+    </div>
+  </header>
+
+  <!-- Search and Filter Section -->
+  <div class="search-filter-section">
+    <div class="search-container">
+      <input
+        type="text"
+        placeholder="Busqueda de productos..."
+        class="search-input"
+        [value]="searchTerm()"
+        (input)="onSearch($event)"
+      >
+    </div>
+
+    <div class="filter-container">
+      <button class="filter-btn" (click)="toggleFilters()">
+        Filtrar
+      </button>
+
+      <div class="filter-dropdown" [class.show]="showFilters()">
+        <div class="filter-option" (click)="clearFilters()">All Products</div>
+        <div
+          class="filter-option"
+          *ngFor="let type of productTypes()"
+          (click)="onTypeFilter(type)"
+          [class.selected]="selectedType() === type"
+        >
+          {{ type }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Filters -->
+  <div class="active-filters" *ngIf="selectedType() || searchTerm()">
+    <span *ngIf="searchTerm()" class="filter-tag">
+      Search: "{{ searchTerm() }}"
+      <button (click)="searchTerm.set('')">×</button>
+    </span>
+    <span *ngIf="selectedType()" class="filter-tag">
+      Type: {{ selectedType() }}
+      <button (click)="selectedType.set('')">×</button>
+    </span>
+    <button class="clear-all" (click)="clearFilters()">Clear All</button>
+  </div>
+
+  <!-- Products Grid -->
+  <div class="products-grid">
+    <div class="product-card" *ngFor="let product of paginatedProducts()">
+      <div class="product-image">
+       <img [ngSrc]="product.image || 'assets/images/placeholder.png'" fill alt="image">
+        <div class="discount-badge" *ngIf="product.discountedPrice < product.price">
+          -{{ getDiscountPercentage(product.price, product.discountedPrice) }}%
+        </div>
+      </div>
+
+      <div class="product-info">
+        <h3 class="product-name">{{ product.name }}</h3>
+        <p class="product-type">{{ product.type }}</p>
+
+        <div class="price-container">
+          <span class="discounted-price">${{ product.discountedPrice }}</span>
+          <span class="original-price" *ngIf="product.discountedPrice < product.price">
+            ${{ product.price }}
+          </span>
+        </div>
+
+        <button class="add-to-cart-btn">Añadir al carrito</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-container" *ngIf="totalPages() > 1 || filteredProducts().length > 0">
+    <div class="pagination-top">
+      <div class="pagination-info">
+        <span>
+          Mostrando {{ paginationInfo().startItem }}-{{ paginationInfo().endItem }}
+          de {{ paginationInfo().total }} productos
+        </span>
+      </div>
+
+      <div class="items-per-page">
+        <label for="itemsPerPage">Mostrar:</label>
+        <select
+          id="itemsPerPage"
+          [value]="itemsPerPage()"
+          (change)="onItemsPerPageChange($event)"
+          class="items-per-page-select"
+        >
+          <option value="8">8</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <span>por página</span>
+      </div>
+    </div>
+
+    <div class="pagination-controls" *ngIf="totalPages() > 1">
+      <button
+        class="pagination-btn prev-btn"
+        [disabled]="currentPage() === 1"
+        (click)="previousPage()"
+      >
+        ‹ Atras
+      </button>
+
+      <div class="pagination-pages">
+        <button
+          *ngFor="let page of visiblePages()"
+          class="pagination-btn page-btn"
+          [class.active]="page === currentPage()"
+          [class.ellipsis]="page === '...'"
+          [disabled]="page === '...'"
+          (click)="page !== '...' && goToPage(+page)"
+        >
+          {{ page }}
+        </button>
+      </div>
+
+      <button
+        class="pagination-btn next-btn"
+        [disabled]="currentPage() === totalPages()"
+        (click)="nextPage()"
+      >
+        Siguiente ›
+      </button>
+    </div>
+  </div>
+
+  <!-- No Results -->
+  <div class="no-results" *ngIf="filteredProducts().length === 0">
+    <h3>No products found</h3>
+    <p>Try adjusting your search or filters</p>
+  </div>
+</div>
