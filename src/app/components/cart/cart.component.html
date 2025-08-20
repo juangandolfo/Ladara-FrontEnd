@@ -1,0 +1,124 @@
+<div class="cart-container">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
+      <h1>Ladara</h1>
+    </div>
+  </header>
+
+  <div class="cart-header">
+    <h1>Carrito</h1>
+    <span class="item-count">{{ totalItems() }} {{ totalItems() === 1 ? 'artículo' : 'artículos' }}</span>
+  </div>
+
+  <!-- Empty Cart State -->
+  <div class="empty-cart" *ngIf="cartItems().length === 0">
+    <div class="empty-cart-icon">🛒</div>
+    <h2>Tu carrito esta vacio</h2>
+    <p>Parece que no has añadido nada aún.</p>
+    <button class="continue-shopping-btn" (click)="continueShopping()">
+      Empieza a comprar
+    </button>
+  </div>
+
+  <!-- Cart Content -->
+  <div class="cart-content" *ngIf="cartItems().length > 0">
+    <div class="cart-items">
+      <!-- Cart Header Controls -->
+      <div class="cart-controls">
+        <button class="clear-cart-btn" (click)="clearCart()">
+          Vaciar Carrito
+        </button>
+      </div>
+
+      <!-- Cart Items -->
+      <div class="cart-item" *ngFor="let item of cartItems()">
+        <div class="item-image">
+          <img [src]="item.image" [alt]="item.name" />
+        </div>
+
+        <div class="item-details">
+          <h3 class="item-name">{{ item.name }}</h3>
+          <p class="item-description">{{ item.description }}</p>
+          <span class="item-type">{{ item.type }}</span>
+        </div>
+
+        <div class="item-price">
+          <div class="price-info">
+            <span class="current-price">${{ (item.discountedPrice || item.price).toFixed(2) }}</span>
+            <span class="original-price" *ngIf="item.discountedPrice">
+              ${{ item.price.toFixed(2) }}
+            </span>
+          </div>
+          <span class="discount-badge" *ngIf="item.discountedPrice">
+            Ahorra ${{ (item.price - item.discountedPrice!).toFixed(2) }}
+          </span>
+        </div>
+
+        <div class="quantity-controls">
+          <button
+            class="quantity-btn decrease"
+            (click)="updateQuantity(item.id, item.quantity - 1)"
+            [disabled]="item.quantity <= 1">
+            -
+          </button>
+          <span class="quantity">{{ item.quantity }}</span>
+          <button
+            class="quantity-btn increase"
+            (click)="updateQuantity(item.id, item.quantity + 1)">
+            +
+          </button>
+        </div>
+
+        <div class="item-total">
+          <span class="total-price">
+            ${{ ((item.discountedPrice || item.price) * item.quantity).toFixed(2) }}
+          </span>
+        </div>
+
+        <button class="remove-item-btn" (click)="removeItem(item.id)">
+          ×
+        </button>
+      </div>
+    </div>
+
+    <!-- Cart Summary -->
+    <div class="cart-summary">
+      <div class="summary-card">
+        <h3>Resumen de compra</h3>
+
+        <div class="summary-row">
+          <span>Subtotal ({{ totalItems() }} {{ totalItems() === 1 ? 'artículo' : 'artículos' }})</span>
+          <span>${{ subtotal().toFixed(2) }}</span>
+        </div>
+
+        <div class="summary-row savings" *ngIf="totalSavings() > 0">
+          <span>Descuento</span>
+          <span class="savings-amount">-${{ totalSavings().toFixed(2) }}</span>
+        </div>
+
+        <div class="summary-row">
+          <span>Impuestos</span>
+          <span>${{ tax().toFixed(2) }}</span>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-row total">
+          <span>Total</span>
+          <span>${{ total().toFixed(2) }}</span>
+        </div>
+
+        <div class="checkout-actions">
+          <button class="checkout-btn" (click)="proceedToCheckout()">
+            Proceder al pago
+          </button>
+          <button class="continue-shopping-link" (click)="continueShopping()">
+            Seguir comprando
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

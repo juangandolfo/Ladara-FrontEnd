@@ -1,190 +1,227 @@
-import { Component, signal, computed } from '@angular/core';
-import {CommonModule, NgOptimizedImage} from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Product } from '../../models/product.model';
+import {Component, computed, effect, OnInit, signal} from '@angular/core';
+  import {CommonModule, NgOptimizedImage} from '@angular/common';
+  import {FormsModule} from '@angular/forms';
+  import {Router} from '@angular/router';
+  import {Product} from '../../models/product.model';
+  import {ProductService} from '../../services/product.service';
+  import {OrderService} from '../../services/order.service';
+  import {AuthService} from '../../services/auth.service';
 
-@Component({
-  selector: 'app-home',
-  standalone: true,
-  imports: [CommonModule, FormsModule, NgOptimizedImage],
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.css'
-})
-export class HomeComponent {
-  searchTerm = signal('');
-  selectedType = signal('');
-  showFilters = signal(false);
+  @Component({
+    selector: 'app-home',
+    standalone: true,
+    imports: [CommonModule, FormsModule, NgOptimizedImage],
+    templateUrl: './home.component.html',
+    styleUrl: './home.component.css'
+  })
+  export class HomeComponent implements OnInit {
+    searchTerm = signal('');
+    selectedCategory = signal('');
+    showFilters = signal(false);
 
-  // Pagination signals
-  currentPage = signal(1);
-  itemsPerPage = signal(8); // Default items per page
+    currentPage = signal(1);
+    itemsPerPage = signal(8);
 
-  // Mock data - replace with actual service call
-  products = signal<Product[]>([
-    { id: 1, name: 'Laptop Pro', price: 1200, discountedPrice: 999, type: 'Electronics' },
-    { id: 2, name: 'Wireless Headphones', price: 150, discountedPrice: 120, type: 'Electronics' },
-    { id: 3, name: 'Running Shoes', price: 80, discountedPrice: 65, type: 'Sports' },
-    { id: 4, name: 'Coffee Maker', price: 200, discountedPrice: 180, type: 'Home' },
-    { id: 5, name: 'Book Collection', price: 50, discountedPrice: 35, type: 'Books' },
-    { id: 6, name: 'Gaming Mouse', price: 60, discountedPrice: 45, type: 'Electronics' },
-    { id: 7, name: 'Smartphone', price: 800, discountedPrice: 699, type: 'Electronics' },
-    { id: 8, name: 'Yoga Mat', price: 40, discountedPrice: 30, type: 'Sports' },
-    { id: 9, name: 'Blender', price: 120, discountedPrice: 95, type: 'Home' },
-    { id: 10, name: 'Novel Series', price: 75, discountedPrice: 60, type: 'Books' },
-    { id: 11, name: 'Keyboard', price: 90, discountedPrice: 70, type: 'Electronics' },
-    { id: 12, name: 'Tennis Racket', price: 150, discountedPrice: 120, type: 'Sports' },
-    { id: 13, name: 'Air Fryer', price: 180, discountedPrice: 150, type: 'Home' },
-    { id: 14, name: 'Programming Books', price: 100, discountedPrice: 80, type: 'Books' },
-    { id: 15, name: 'Monitor', price: 300, discountedPrice: 250, type: 'Electronics' }
-  ]);
+    products = signal<Product[]>([]);
+    currentOrderId = 1;
+    isLoggedIn = false;
 
-  productTypes = computed(() => {
-    const types = new Set(this.products().map(p => p.type));
-    return Array.from(types);
-  });
-
-  filteredProducts = computed(() => {
-    let filtered = this.products();
-
-    if (this.searchTerm()) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(this.searchTerm().toLowerCase())
-      );
-    }
-
-    if (this.selectedType()) {
-      filtered = filtered.filter(product => product.type === this.selectedType());
-    }
-
-    return filtered;
-  });
-
-  // Pagination computed properties
-  totalPages = computed(() =>
-    Math.ceil(this.filteredProducts().length / this.itemsPerPage())
-  );
-
-  paginatedProducts = computed(() => {
-    const filtered = this.filteredProducts();
-    const startIndex = (this.currentPage() - 1) * this.itemsPerPage();
-    const endIndex = startIndex + this.itemsPerPage();
-    return filtered.slice(startIndex, endIndex);
-  });
-
-  paginationInfo = computed(() => {
-    const total = this.filteredProducts().length;
-    const startItem = total === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1;
-    const endItem = Math.min(this.currentPage() * this.itemsPerPage(), total);
-    return { startItem, endItem, total };
-  });
-
-  visiblePages = computed(() => {
-    const total = this.totalPages();
-    const current = this.currentPage();
-    const pages: (number | string)[] = [];
-
-    if (total <= 7) {
-      // Show all pages if 7 or fewer
-      for (let i = 1; i <= total; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Always show first page
-      pages.push(1);
-
-      if (current > 4) {
-        pages.push('...');
-      }
-
-      // Show pages around current page
-      const start = Math.max(2, current - 2);
-      const end = Math.min(total - 1, current + 2);
-
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-
-      if (current < total - 3) {
-        pages.push('...');
-      }
-
-      // Always show last page if more than 1 page
-      if (total > 1) {
-        pages.push(total);
+    ngOnInit() {
+      this.isLoggedIn = !!localStorage.getItem('userId');
+      const cachedId = this.getCartIdFromCache();
+      if (cachedId) {
+        this.currentOrderId = cachedId;
+      } else {
+        this.orderService.getCurrentOrder().subscribe({
+          next: (order: any) => {
+            if (order && order.id) {
+              this.setCartIdInCache(order.id);
+              this.currentOrderId = order.id;
+            } else {
+              this.orderService.createOrder().subscribe({
+                next: (order: any) => {
+                  this.currentOrderId = order.id;
+                  this.setCartIdInCache(order.id);
+                },
+                error: (err: any) => {
+                  console.error('Error creating order:', err);
+                }
+              });
+            }
+          },
+          error: (err: any) => {
+            console.error('Error fetching current order:', err);
+          }
+        });
       }
     }
 
-    return pages;
-  });
-
-  onItemsPerPageChange(event: Event) {
-    const target = event.target as HTMLSelectElement;
-    const value = parseInt(target.value, 10);
-    if (!isNaN(value) && value > 0) {
-      this.itemsPerPage.set(value);
-      this.currentPage.set(1); // Reset to first page on items per page change
+    constructor(
+      private router: Router,
+      private productService: ProductService,
+      private orderService: OrderService,
+      private authService: AuthService
+    ) {
+      const cachedId = this.getCartIdFromCache();
+      this.currentOrderId = cachedId ?? 1;
+      effect(() => {
+        this.fetchFilteredProducts();
+      });
     }
-  }
 
-  constructor(private router: Router) {}
+    productCategories = computed(() => {
+      const categories = new Set(this.products().map(p => p.category));
+      return Array.from(categories);
+    });
 
-  onSearch(event: Event) {
-    const target = event.target as HTMLInputElement;
-    this.searchTerm.set(target.value);
-    this.currentPage.set(1); // Reset to first page on search
-  }
+    filteredProducts = computed(() => {
+      return this.products();
+    });
 
-  toggleFilters() {
-    this.showFilters.set(!this.showFilters());
-    if (this.showFilters()) {
-      // Reset filters when opening
-      this.selectedType.set('');
+    totalPages = computed(() =>
+      Math.ceil(this.filteredProducts().length / this.itemsPerPage())
+    );
+
+    paginatedProducts = computed(() => {
+      const filtered = this.filteredProducts();
+      const startIndex = (this.currentPage() - 1) * this.itemsPerPage();
+      const endIndex = startIndex + this.itemsPerPage();
+      return filtered.slice(startIndex, endIndex);
+    });
+
+    paginationInfo = computed(() => {
+      const total = this.filteredProducts().length;
+      const startItem = total === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage() + 1;
+      const endItem = Math.min(this.currentPage() * this.itemsPerPage(), total);
+      return {startItem, endItem, total};
+    });
+
+    visiblePages = computed(() => {
+      const total = this.totalPages();
+      const current = this.currentPage();
+      const pages: (number | string)[] = [];
+
+      if (total <= 7) {
+        for (let i = 1; i <= total; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        if (current > 4) {
+          pages.push('...');
+        }
+        const start = Math.max(2, current - 2);
+        const end = Math.min(total - 1, current + 2);
+        for (let i = start; i <= end; i++) {
+          pages.push(i);
+        }
+        if (current < total - 3) {
+          pages.push('...');
+        }
+        if (total > 1) {
+          pages.push(total);
+        }
+      }
+      return pages;
+    });
+
+    onItemsPerPageChange(event: Event) {
+      const target = event.target as HTMLSelectElement;
+      const value = parseInt(target.value, 10);
+      if (!isNaN(value) && value > 0) {
+        this.itemsPerPage.set(value);
+        this.currentPage.set(1);
+      }
+    }
+
+    onSearch(event: Event) {
+      const target = event.target as HTMLInputElement;
+      this.searchTerm.set(target.value);
+      this.currentPage.set(1);
+    }
+
+    toggleFilters() {
+      this.showFilters.set(!this.showFilters());
+      if (this.showFilters()) {
+        this.selectedCategory.set('');
+        this.searchTerm.set('');
+        this.currentPage.set(1);
+      }
+    }
+
+    onCategoryFilter(category: string) {
+      this.selectedCategory.set(category);
+      this.showFilters.set(false);
+      this.currentPage.set(1);
+    }
+
+    clearFilters() {
+      this.selectedCategory.set('');
       this.searchTerm.set('');
-      this.currentPage.set(1); // Reset to first page
+      this.showFilters.set(false);
+      this.currentPage.set(1);
+    }
+
+    goToPage(page: number) {
+      if (page >= 1 && page <= this.totalPages()) {
+        this.currentPage.set(page);
+        document.querySelector('.products-grid')?.scrollIntoView({behavior: 'smooth'});
+      }
+    }
+
+    previousPage() {
+      this.goToPage(this.currentPage() - 1);
+    }
+
+    nextPage() {
+      this.goToPage(this.currentPage() + 1);
+    }
+
+    goToCart() {
+      this.router.navigate(['/cart']);
+    }
+
+    login() {
+      this.authService.loginWithGoogle();
+    }
+
+    logout() {
+      localStorage.removeItem('userId');
+      this.isLoggedIn = false;
+      this.router.navigate(['/']);
+    }
+
+    getDiscountPercentage(price: number, discountedPrice: number): number {
+      return Math.round(((price - discountedPrice) / price) * 100);
+    }
+
+    fetchFilteredProducts() {
+      const filters: any = {};
+      if (this.searchTerm()) filters.name = this.searchTerm();
+      if (this.selectedCategory()) filters.category = this.selectedCategory();
+      this.productService.filterProductsQuery(filters).subscribe(response => {
+        this.products.set(response.data || []);
+      });
+    }
+
+    setCartIdInCache(orderId: number) {
+      localStorage.setItem('cartOrderId', orderId.toString());
+    }
+
+    getCartIdFromCache(): number | null {
+      const id = localStorage.getItem('cartOrderId');
+      return id ? parseInt(id, 10) : null;
+    }
+
+    addToCart(productId: number, quantity: number = 1) {
+      this.orderService.addItemToOrder(this.currentOrderId, productId, quantity)
+        .subscribe({
+          next: (item) => {
+            console.log('Product added to cart:', item);
+          },
+          error: (err) => {
+            console.error('Error adding to cart:', err);
+          }
+        });
     }
   }
-
-  onTypeFilter(type: string) {
-    this.selectedType.set(type);
-    this.showFilters.set(false);
-    this.currentPage.set(1); // Reset to first page on filter
-  }
-
-  clearFilters() {
-    this.selectedType.set('');
-    this.searchTerm.set('');
-    this.showFilters.set(false);
-    this.currentPage.set(1); // Reset to first page
-  }
-
-  // Pagination methods
-  goToPage(page: number) {
-    if (page >= 1 && page <= this.totalPages()) {
-      this.currentPage.set(page);
-      // Scroll to top of products grid
-      document.querySelector('.products-grid')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }
-
-  previousPage() {
-    this.goToPage(this.currentPage() - 1);
-  }
-
-  nextPage() {
-    this.goToPage(this.currentPage() + 1);
-  }
-
-  goToCart() {
-    this.router.navigate(['/cart']);
-  }
-
-  login() {
-    // Implement login logic
-    console.log('Login clicked');
-  }
-
-  getDiscountPercentage(price: number, discountedPrice: number): number {
-    return Math.round(((price - discountedPrice) / price) * 100);
-  }
-}

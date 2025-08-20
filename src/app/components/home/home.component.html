@@ -2,15 +2,15 @@
   <!-- Header -->
   <header class="header">
     <div class="logo">
+      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
       <h1>Ladara</h1>
     </div>
     <div class="header-actions">
-      <button class="login-btn" (click)="login()">Inicia sesión</button>
+      <button class="login-btn" *ngIf="!isLoggedIn" (click)="login()">Inicia sesión</button>
+      <button class="login-btn" *ngIf="isLoggedIn" (click)="logout()">Cerrar sesión</button>
       <button class="cart-btn" (click)="goToCart()">
-        <button class="cart-btn" (click)="goToCart()">
-          <span class="cart-icon">🛒</span>
-          <span>Carrito</span>
-        </button>
+        <span class="cart-icon">🛒</span>
+        <span>Carrito</span>
       </button>
     </div>
   </header>
@@ -33,28 +33,27 @@
       </button>
 
       <div class="filter-dropdown" [class.show]="showFilters()">
-        <div class="filter-option" (click)="clearFilters()">All Products</div>
         <div
           class="filter-option"
-          *ngFor="let type of productTypes()"
-          (click)="onTypeFilter(type)"
-          [class.selected]="selectedType() === type"
+          *ngFor="let category of productCategories()"
+          (click)="onCategoryFilter(category)"
+          [class.selected]="selectedCategory() === category"
         >
-          {{ type }}
+          {{ category }}
         </div>
       </div>
     </div>
   </div>
 
   <!-- Active Filters -->
-  <div class="active-filters" *ngIf="selectedType() || searchTerm()">
+  <div class="active-filters" *ngIf="selectedCategory() || searchTerm()">
     <span *ngIf="searchTerm()" class="filter-tag">
       Search: "{{ searchTerm() }}"
       <button (click)="searchTerm.set('')">×</button>
     </span>
-    <span *ngIf="selectedType()" class="filter-tag">
-      Type: {{ selectedType() }}
-      <button (click)="selectedType.set('')">×</button>
+    <span *ngIf="selectedCategory()" class="filter-tag">
+      Type: {{ selectedCategory() }}
+      <button (click)="selectedCategory.set('')">×</button>
     </span>
     <button class="clear-all" (click)="clearFilters()">Clear All</button>
   </div>
@@ -63,7 +62,7 @@
   <div class="products-grid">
     <div class="product-card" *ngFor="let product of paginatedProducts()">
       <div class="product-image">
-       <img [ngSrc]="product.image || 'assets/images/placeholder.png'" fill alt="image">
+        <img priority [ngSrc]="product.image || 'assets/images/placeholder.png'" fill alt="image">
         <div class="discount-badge" *ngIf="product.discountedPrice < product.price">
           -{{ getDiscountPercentage(product.price, product.discountedPrice) }}%
         </div>
@@ -71,7 +70,7 @@
 
       <div class="product-info">
         <h3 class="product-name">{{ product.name }}</h3>
-        <p class="product-type">{{ product.type }}</p>
+        <p class="product-type">{{ product.category }}</p>
 
         <div class="price-container">
           <span class="discounted-price">${{ product.discountedPrice }}</span>
@@ -80,7 +79,7 @@
           </span>
         </div>
 
-        <button class="add-to-cart-btn">Añadir al carrito</button>
+        <button class="add-to-cart-btn" (click)="addToCart(product.id)">Añadir al carrito</button>
       </div>
     </div>
   </div>
