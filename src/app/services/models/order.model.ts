@@ -1,3 +1,5 @@
+import {ApiResponse} from './base.model';
+
 export interface AddItemToOrderDto {
   productId: number;
   quantity: number;
@@ -26,16 +28,11 @@ export interface OrderDto {
   items?: OrderItemDto[];
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data?: T;
-  error?: string;
-}
 
 export interface CreateOrderResponse extends ApiResponse<OrderDto> {}
 export interface GetOrderResponse extends ApiResponse<OrderDto> {}
 export interface GetCurrentOrderResponse extends ApiResponse<OrderDto[]> {}
+export interface GetCategoriesResponse extends ApiResponse<string[]> {}
 export interface CancelOrderResponse extends ApiResponse<OrderDto> {}
 export interface CompleteOrderResponse extends ApiResponse<OrderDto> {}
 export interface AddItemResponse extends ApiResponse<OrderItemDto> {}

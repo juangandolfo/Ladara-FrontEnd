@@ -1,12 +1,21 @@
+import {ApiResponse} from './base.model';
+
 export interface ProductFilterDto {
+  id?: number;
+  name?: string;
+  description?: string;
+  code?: string;
+  price?: number;
   minPrice?: number;
   maxPrice?: number;
+  stock?: number;
   minStock?: number;
   maxStock?: number;
-  category?: string;
-  name?: string;
-  brand?: string;
-  isActive?: boolean;
+  sortBy?: 'id' | 'name' | 'price' | 'description' | 'code' | 'stock';
+  sortOrder?: 'ASC' | 'DESC';
+  limit?: number;
+  offset?: number;
+  includeDeleted?: boolean;
 }
 
 export interface Product {
@@ -31,14 +40,6 @@ export interface FilterMeta {
   appliedFilters: Partial<ProductFilterDto>;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data?: T;
-  meta?: FilterMeta;
-  error?: string;
-}
-
 export interface FilterProductsResponse {
   products: Product[];
   total: number;
@@ -48,9 +49,4 @@ export interface FilterProductsResponse {
 
 export type FilterProductsApiResponse = ApiResponse<Product[]> & {
   meta: FilterMeta;
-};
-
-export type ErrorResponse = ApiResponse<never> & {
-  success: false;
-  error: string;
 };

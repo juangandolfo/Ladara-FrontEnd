@@ -34,7 +34,7 @@
   font-weight: 600;
   margin: 0;
   letter-spacing: -0.5px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .header-actions {
@@ -51,6 +51,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   font-size: 1rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .login-btn {
@@ -103,6 +104,7 @@
   box-sizing: border-box;
   transition: all 0.3s ease;
   background: white;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .search-input:focus {
@@ -128,6 +130,7 @@
   box-sizing: border-box;
   white-space: nowrap;
   transition: all 0.3s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .filter-btn:hover {
@@ -164,6 +167,7 @@
   transition: all 0.2s ease;
   font-weight: 500;
   color: #2c3e50;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .filter-option:hover {
@@ -195,6 +199,7 @@
   align-items: center;
   gap: 10px;
   box-shadow: 0 2px 8px rgba(74, 111, 165, 0.15);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .filter-tag button {
@@ -229,12 +234,7 @@
   font-weight: 500;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(122, 140, 168, 0.15);
-}
-
-.clear-all:hover {
-  background: #6a7a94;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(122, 140, 168, 0.2);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Products Grid */
@@ -302,6 +302,7 @@
   color: #2c3e50;
   margin: 0 0 10px 0;
   line-height: 1.4;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .product-type {
@@ -313,6 +314,7 @@
   font-weight: 500;
   display: inline-block;
   margin-bottom: 15px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .price-container {
@@ -326,12 +328,14 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: #2c3e50;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .original-price {
   font-size: 1rem;
   color: #95a5a6;
   text-decoration: line-through;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .add-to-cart-btn {
@@ -345,12 +349,7 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-}
-
-.add-to-cart-btn:hover {
-  background: #3d5a8a;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* No Results */
@@ -368,11 +367,13 @@
   margin-bottom: 15px;
   color: #2c3e50;
   font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .no-results p {
   font-size: 1.1rem;
   color: #7f8c8d;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Pagination */
@@ -399,6 +400,7 @@
   color: #7f8c8d;
   font-size: 1rem;
   font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .items-per-page {
@@ -407,10 +409,12 @@
   gap: 12px;
   color: #7f8c8d;
   font-size: 1rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .items-per-page label {
   font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .items-per-page-select {
@@ -424,6 +428,7 @@
   cursor: pointer;
   min-width: 70px;
   transition: all 0.3s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .items-per-page-select:focus {
@@ -460,6 +465,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .pagination-btn:hover:not(:disabled) {
@@ -493,6 +499,7 @@
   cursor: default;
   font-weight: bold;
   color: #7f8c8d;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .pagination-btn.ellipsis:hover {
@@ -507,6 +514,7 @@
   background: transparent;
   border: 2px solid #4a6fa5;
   color: #4a6fa5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .prev-btn:not(:disabled):hover,
@@ -537,6 +545,7 @@
   font-weight: 600;
   color: #2c3e50;
   margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .cart-icon {
@@ -575,12 +584,14 @@
   color: #2c3e50;
   margin-bottom: 10px;
   font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .empty-cart p {
   color: #7f8c8d;
   margin-bottom: 30px;
   font-size: 1.1rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .continue-shopping-btn {
@@ -670,6 +681,7 @@
   color: #2c3e50;
   margin: 0 0 8px 0;
   line-height: 1.3;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .item-description {

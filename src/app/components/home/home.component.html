@@ -35,7 +35,7 @@
       <div class="filter-dropdown" [class.show]="showFilters()">
         <div
           class="filter-option"
-          *ngFor="let category of productCategories()"
+          *ngFor="let category of categories()"
           (click)="onCategoryFilter(category)"
           [class.selected]="selectedCategory() === category"
         >
@@ -46,18 +46,17 @@
   </div>
 
   <!-- Active Filters -->
-  <div class="active-filters" *ngIf="selectedCategory() || searchTerm()">
-    <span *ngIf="searchTerm()" class="filter-tag">
-      Search: "{{ searchTerm() }}"
-      <button (click)="searchTerm.set('')">×</button>
-    </span>
-    <span *ngIf="selectedCategory()" class="filter-tag">
-      Type: {{ selectedCategory() }}
+  <div class="active-filters" *ngIf="(selectedCategory() && selectedCategory() !== 'Todas') || searchTerm()">
+  <span *ngIf="searchTerm()" class="filter-tag">
+    Search: "{{ searchTerm() }}"
+    <button (click)="searchTerm.set('')">×</button>
+  </span>
+    <span *ngIf="selectedCategory() && selectedCategory() !== 'Todas'" class="filter-tag">
+    Tipo: {{ selectedCategory() }}
       <button (click)="selectedCategory.set('')">×</button>
-    </span>
-    <button class="clear-all" (click)="clearFilters()">Clear All</button>
+  </span>
+    <button class="clear-all" (click)="clearFilters()">Limpiar filtros</button>
   </div>
-
   <!-- Products Grid -->
   <div class="products-grid">
     <div class="product-card" *ngFor="let product of paginatedProducts()">
@@ -85,7 +84,7 @@
   </div>
 
   <!-- Pagination -->
-  <div class="pagination-container" *ngIf="totalPages() > 1 || filteredProducts().length > 0">
+  <div class="pagination-container" *ngIf="totalPages() > 1 || totalCount() > 0">
     <div class="pagination-top">
       <div class="pagination-info">
         <span>
@@ -143,7 +142,7 @@
   </div>
 
   <!-- No Results -->
-  <div class="no-results" *ngIf="filteredProducts().length === 0">
+  <div class="no-results" *ngIf="totalCount() === 0">
     <h3>No products found</h3>
     <p>Try adjusting your search or filters</p>
   </div>
