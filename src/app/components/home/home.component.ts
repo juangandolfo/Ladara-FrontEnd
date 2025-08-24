@@ -2,8 +2,8 @@ import {Component, computed, effect, OnInit, signal} from '@angular/core';
   import {CommonModule, NgOptimizedImage} from '@angular/common';
   import {FormsModule} from '@angular/forms';
   import {Router} from '@angular/router';
-  import {Product} from '../../models/product.model';
-  import {ProductService} from '../../services/product.service';
+  import {Product} from '../../services/models/product.models';
+import {ProductService} from '../../services/product.service';
   import {OrderService} from '../../services/order.service';
   import {AuthService} from '../../services/auth.service';
 
