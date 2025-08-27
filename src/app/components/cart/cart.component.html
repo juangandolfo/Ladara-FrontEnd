@@ -1,11 +1,31 @@
 <div class="cart-container">
   <!-- Header -->
   <header class="header">
-    <div class="logo">
+    <div class="logo" (click)="goHome()">
       <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
       <h1>Ladara</h1>
     </div>
+    <div class="header-actions">
+      <button class="continue-shopping-btn" (click)="goHome()">
+        <img src="assets/images/home.svg" alt="Inicio" class="home-icon"/>
+        Inicio
+      </button>
+      <button class="orders-btn" (click)="goToOrders()">
+        <img src="assets/images/mis-compras.svg" alt="Mis Compras Icon" class="orders-icon">
+        Mis Órdenes
+      </button>
+    </div>
   </header>
+
+  <!-- Error Display -->
+  <div class="error-message" *ngIf="error()">
+    {{ error() }}
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading()">
+    <p>Cargando carrito...</p>
+  </div>
 
   <div class="cart-header">
     <h1>Carrito</h1>
@@ -13,17 +33,17 @@
   </div>
 
   <!-- Empty Cart State -->
-  <div class="empty-cart" *ngIf="cartItems().length === 0">
+  <div class="empty-cart" *ngIf="isEmpty() && !isLoading()">
     <div class="empty-cart-icon">🛒</div>
     <h2>Tu carrito esta vacio</h2>
     <p>Parece que no has añadido nada aún.</p>
-    <button class="continue-shopping-btn" (click)="continueShopping()">
+    <button class="continue-shopping-btn" (click)="goHome()">
       Empieza a comprar
     </button>
   </div>
 
   <!-- Cart Content -->
-  <div class="cart-content" *ngIf="cartItems().length > 0">
+  <div class="cart-content" *ngIf="hasItems() && !isLoading()">
     <div class="cart-items">
       <!-- Cart Header Controls -->
       <div class="cart-controls">
@@ -41,7 +61,7 @@
         <div class="item-details">
           <h3 class="item-name">{{ item.name }}</h3>
           <p class="item-description">{{ item.description }}</p>
-          <span class="item-type">{{ item.type }}</span>
+          <span class="item-type">{{ item.category }}</span>
         </div>
 
         <div class="item-price">
@@ -59,14 +79,14 @@
         <div class="quantity-controls">
           <button
             class="quantity-btn decrease"
-            (click)="updateQuantity(item.id, item.quantity - 1)"
+            (click)="updateQuantity(item.id, - 1)"
             [disabled]="item.quantity <= 1">
             -
           </button>
           <span class="quantity">{{ item.quantity }}</span>
           <button
             class="quantity-btn increase"
-            (click)="updateQuantity(item.id, item.quantity + 1)">
+            (click)="updateQuantity(item.id, 1)">
             +
           </button>
         </div>
@@ -114,7 +134,7 @@
           <button class="checkout-btn" (click)="proceedToCheckout()">
             Proceder al pago
           </button>
-          <button class="continue-shopping-link" (click)="continueShopping()">
+          <button class="continue-shopping-link" (click)="goHome()">
             Seguir comprando
           </button>
         </div>

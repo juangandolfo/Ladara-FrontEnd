@@ -34,7 +34,7 @@
   font-weight: 600;
   margin: 0;
   letter-spacing: -0.5px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .header-actions {
@@ -43,7 +43,7 @@
   align-items: center;
 }
 
-.login-btn, .cart-btn {
+.login-btn, .cart-btn, .orders-btn {
   padding: 12px 24px;
   border: none;
   border-radius: 8px;
@@ -52,6 +52,9 @@
   transition: all 0.3s ease;
   font-size: 1rem;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .login-btn {
@@ -68,17 +71,34 @@
 .cart-btn {
   background: #6c7b95;
   color: white;
-  font-size: 1rem;
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .cart-btn:hover {
   background: #5a6780;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(108, 123, 149, 0.2);
+}
+
+.orders-btn {
+  background: #27ae60;
+  color: white;
+}
+
+.orders-btn:hover {
+  background: #229954;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
+}
+
+.cart-icon,
+.orders-icon,
+.login-icon,
+.logout-icon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
+  vertical-align: middle;
 }
 
 /* Search & Filter */
@@ -317,25 +337,102 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+.price-quantity-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px;
+}
+
 .price-container {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  flex: 1;
 }
 
-.discounted-price {
-  font-size: 1.5rem;
-  font-weight: 700;
+/* Quantity Section for Product Cards */
+.quantity-section {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quantity-section .quantity-controls {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 4px;
+  border: 1px solid #e8eef5;
+  width: fit-content;
+}
+
+.quantity-section .quantity-btn {
+  width: 35px;
+  height: 35px;
+  border: none;
+  background: white;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #4a6fa5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.quantity-section .quantity-btn:hover:not(:disabled) {
+  background: #4a6fa5;
+  color: white;
+}
+
+.quantity-section .quantity-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: #bdc3c7;
+}
+
+.quantity-section .quantity {
+  min-width: 40px;
+  text-align: center;
+  font-weight: 600;
   color: #2c3e50;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.original-price {
-  font-size: 1rem;
-  color: #95a5a6;
-  text-decoration: line-through;
+.quantity-input {
+  min-width: 40px;
+  width: 40px;
+  text-align: center;
+  font-weight: 600;
+  color: #2c3e50;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+.quantity-input:focus {
+  background: rgba(74, 111, 165, 0.1);
+  border-radius: 4px;
+}
+
+/* Remove spinner arrows from number input */
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.quantity-input[type=number] {
+  -moz-appearance: textfield;
 }
 
 .add-to-cart-btn {
@@ -350,6 +447,12 @@
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.add-to-cart-btn:hover {
+  background: #3d5a8a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
 }
 
 /* No Results */
@@ -546,12 +649,6 @@
   color: #2c3e50;
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.cart-icon {
-  width: 40px;
-  height: 40px;
-  filter: brightness(0) invert(1);
 }
 
 .item-count {
@@ -776,6 +873,38 @@
   text-align: center;
   font-weight: 600;
   color: #2c3e50;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.quantity-input {
+  min-width: 40px;
+  width: 40px;
+  text-align: center;
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+.quantity-input:focus {
+  background: rgba(74, 111, 165, 0.1);
+  border-radius: 4px;
+}
+
+/* Remove spinner arrows from number input */
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.quantity-input[type=number] {
+  -moz-appearance: textfield;
 }
 
 .item-total {
@@ -901,6 +1030,14 @@
   color: white;
 }
 
+.swal-title-custom {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+.swal-text-custom {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .home-container {
@@ -975,6 +1112,23 @@
     padding: 8px 12px;
     width: 100px;
   }
+
+  .quantity-section .quantity-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+
+  .quantity-section .quantity {
+    min-width: 35px;
+    font-size: 0.9rem;
+  }
+
+  .quantity-section .quantity-input {
+    min-width: 35px;
+    width: 35px;
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1005,5 +1159,83 @@
   .pagination-info {
     font-size: 0.8rem;
     text-align: center;
+  }
+
+  .quantity-section .quantity-controls {
+    padding: 3px;
+  }
+
+  .quantity-section .quantity-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
+
+  .quantity-section .quantity {
+    min-width: 30px;
+    font-size: 0.85rem;
+  }
+
+  .quantity-section .quantity-input {
+    min-width: 30px;
+    width: 30px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Responsive adjustments for quantity controls */
+@media (max-width: 768px) {
+  .price-quantity-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .quantity-section {
+    align-self: center;
+  }
+
+  .quantity-section .quantity-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+
+  .quantity-section .quantity {
+    min-width: 35px;
+    font-size: 0.9rem;
+  }
+
+  .quantity-section .quantity-input {
+    min-width: 35px;
+    width: 35px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .price-quantity-row {
+    align-items: center;
+  }
+
+  .quantity-section .quantity-controls {
+    padding: 3px;
+  }
+
+  .quantity-section .quantity-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
+
+  .quantity-section .quantity {
+    min-width: 30px;
+    font-size: 0.85rem;
+  }
+
+  .quantity-section .quantity-input {
+    min-width: 30px;
+    width: 30px;
+    font-size: 0.85rem;
   }
 }

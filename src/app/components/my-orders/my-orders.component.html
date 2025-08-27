@@ -1,0 +1,144 @@
+<div class="orders-container">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo" (click)="goHome()">
+      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
+      <h1>Ladara</h1>
+    </div>
+    <div class="header-actions">
+      <button class="continue-shopping-btn" (click)="continueShopping()">
+        <img src="assets/images/home.svg" alt="Inicio" class="home-icon"/>
+        Inicio
+      </button>
+      <button class="cart-btn" (click)="goToCart()">
+        <img src="assets/images/cart.svg" alt="Cart" class="cart-icon">
+        <span>Carrito</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="orders-header">
+    <h1>Mis Órdenes</h1>
+    <div class="header-summary" *ngIf="hasOrders() && !isLoading()">
+      <span class="summary-text">
+        {{ orderSummary().preparingCount }} preparando •
+        {{ orderSummary().completedCount }} completadas
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading()">
+    <div class="loading-spinner">  <img src="assets/images/loading.svg" alt="Inicio" class="loading-icon"/></div>
+
+    <p>Cargando órdenes...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-state" *ngIf="error() && !isLoading()">
+    <div class="error-icon">⚠️</div>
+    <h2>Error</h2>
+    <p>{{ error() }}</p>
+    <button class="retry-btn" (click)="loadOrders()">Reintentar</button>
+  </div>
+
+  <!-- Orders Content -->
+  <div class="orders-content" *ngIf="!isLoading() && !error()">
+
+    <!-- Preparing Orders (Priority) -->
+    <div class="order-section" *ngIf="preparingOrders().length > 0">
+      <h2 class="section-title">Órdenes en Preparación</h2>
+      <div class="order-card current-order" *ngFor="let order of preparingOrders(); trackBy: trackByOrderId">
+        <div class="order-header">
+          <div class="order-info">
+            <span class="order-id">Orden #{{ order.id }}</span>
+            <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+            <span class="order-status" [class]="getStatusClass(order.status)">
+              {{ getStatusText(order.status) }}
+            </span>
+          </div>
+          <div class="order-actions">
+            <button
+              class="repeat-btn"
+              (click)="repeatOrder(order)"
+              [disabled]="isRepeatingOrder()"
+              [attr.aria-label]="'Repetir orden ' + order.id">
+              {{ isRepeatingOrder() ? 'Añadiendo...' : 'Repetir Orden' }}
+            </button>
+          </div>
+        </div>
+        <div class="order-items">
+          <div class="order-item" *ngFor="let item of order.items; trackBy: trackByItemId">
+            <img [src]="getProductImage(item.product)"
+                 [alt]="item.product.name"
+                 class="item-image">
+            <div class="item-details">
+              <h4>{{ item.product.name }}</h4>
+              <p class="item-category">{{ item.product.category }}</p>
+              <p class="item-quantity">Cantidad: {{ item.quantity }}</p>
+            </div>
+            <div class="item-price">
+              ${{ ((item.product.discountedPrice || item.product.price) * item.quantity).toFixed(2) }}
+            </div>
+          </div>
+        </div>
+        <div class="order-total">
+          <strong>Total: ${{ calculateOrderTotal(order).toFixed(2) }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completed Orders -->
+    <div class="order-section" *ngIf="completedOrders().length > 0">
+      <h2 class="section-title">Historial de Órdenes</h2>
+      <div class="order-card" *ngFor="let order of completedOrders(); trackBy: trackByOrderId">
+        <div class="order-header">
+          <div class="order-info">
+            <span class="order-id">Orden #{{ order.id }}</span>
+            <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+            <span class="order-status" [class]="getStatusClass(order.status)">
+              {{ getStatusText(order.status) }}
+            </span>
+          </div>
+          <div class="order-actions">
+            <button
+              class="repeat-btn"
+              (click)="repeatOrder(order)"
+              [disabled]="isRepeatingOrder()"
+              [attr.aria-label]="'Repetir orden ' + order.id">
+              {{ isRepeatingOrder() ? 'Añadiendo...' : 'Repetir Orden' }}
+            </button>
+          </div>
+        </div>
+        <div class="order-items">
+          <div class="order-item" *ngFor="let item of order.items; trackBy: trackByItemId">
+            <img [src]="getProductImage(item.product)"
+                 [alt]="item.product.name"
+                 class="item-image">
+            <div class="item-details">
+              <h4>{{ item.product.name }}</h4>
+              <p class="item-category">{{ item.product.category }}</p>
+              <p class="item-quantity">Cantidad: {{ item.quantity }}</p>
+            </div>
+            <div class="item-price">
+              ${{ ((item.product.discountedPrice || item.product.price) * item.quantity).toFixed(2) }}
+            </div>
+          </div>
+        </div>
+        <div class="order-total">
+          <strong>Total: ${{ calculateOrderTotal(order).toFixed(2) }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-orders" *ngIf="isEmpty()">
+      <div class="empty-orders-icon">📦</div>
+      <h2>No tienes órdenes aún</h2>
+      <p>Cuando realices tu primera compra, aparecerá aquí.</p>
+      <button class="continue-shopping-btn" (click)="continueShopping()">
+        Empezar a Comprar
+      </button>
+    </div>
+  </div>
+</div>

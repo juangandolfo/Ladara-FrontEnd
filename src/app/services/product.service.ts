@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpParams} from '@angular/common/http';
+import {HttpClient, HttpHeaders, HttpParams} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {FilterProductsApiResponse, ProductFilterDto} from './models/product.models';
 import {ApiResponse} from './models/base.model';
@@ -15,6 +15,14 @@ export class ProductService {
   constructor(private http: HttpClient) {
   }
 
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
+  }
+
   filterProductsQuery(filters: ProductFilterDto): Observable<FilterProductsApiResponse> {
     let params = new HttpParams();
 
@@ -24,12 +32,15 @@ export class ProductService {
       }
     });
 
-    return this.http.get<FilterProductsApiResponse>(`${this.baseUrl}/query`, {params});
+    return this.http.get<FilterProductsApiResponse>(`${this.baseUrl}/query`, {
+      params,
+      headers: this.getAuthHeaders()
+    });
   }
 
   getAllCategories(): Observable<GetCategoriesResponse> {
-    const response = this.http.get<ApiResponse<string[]>>(`${this.baseUrl}/categories`);
-    console.log("response",response.subscribe());
-    return response;
+    return this.http.get<ApiResponse<string[]>>(`${this.baseUrl}/categories`, {
+      headers: this.getAuthHeaders()
+    });
   }
 }

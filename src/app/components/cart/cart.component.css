@@ -40,6 +40,57 @@
   align-items: center;
 }
 
+.continue-shopping-btn {
+  background: #4a6fa5;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.continue-shopping-btn:hover {
+  background: #3d5a8a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
+}
+
+/* Mis Compras Button */
+.orders-btn {
+  background: #27ae60;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.orders-btn:hover {
+  background: #229954;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.2);
+}
+
+.orders-icon,
+.home-icon {
+  width: 24px;
+  height: 24px;
+  filter: brightness(0) invert(1);
+  vertical-align: middle;
+}
+
 .cart-header {
   display: flex;
   justify-content: space-between;
@@ -71,6 +122,9 @@
   border-radius: 12px;
   margin: 40px 0;
   border: 1px solid #e8eef5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .empty-cart-icon {
@@ -92,7 +146,7 @@
   font-size: 1.1rem;
 }
 
-.continue-shopping-btn {
+.empty-cart .continue-shopping-btn {
   background: #4a6fa5;
   color: white;
   border: none;
@@ -102,9 +156,11 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: inline-block;
+  margin: 0 auto;
 }
 
-.continue-shopping-btn:hover {
+.empty-cart .continue-shopping-btn:hover {
   background: #3d5a8a;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
@@ -398,6 +454,28 @@
   color: white;
 }
 
+/* Error and Loading States */
+.error-message {
+  background: #fee;
+  color: #d63031;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #fab1a0;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+.loading-state p {
+  margin: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .cart-content {
@@ -419,6 +497,17 @@
     flex-direction: column;
     gap: 15px;
     text-align: center;
+  }
+
+  .header-actions {
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .continue-shopping-btn, .orders-btn {
+    flex: 1;
+    max-width: 150px;
   }
 
   .logo-image {

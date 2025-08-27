@@ -1,51 +1,62 @@
 import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {Observable} from 'rxjs';
-import {
-  AddItemResponse,
-  AddItemToOrderDto,
-  CancelOrderResponse,
-  CreateOrderResponse,
-  DeleteItemResponse,
-  GetCurrentOrderResponse,
-  GetOrderResponse
-} from './models/order.model';
+
+export interface AddItemToOrderDto {
+  productId: number;
+  quantity: number;
+}
+
+export interface AddItemResponse {
+  success: boolean;
+  item?: any;
+  message?: string;
+}
+
+export interface DeleteItemResponse {
+  success: boolean;
+  message?: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class OrderService {
-  private baseUrl = '/api/orders';
+  private baseUrl = 'http://localhost:3000/api/orders'; // Adjust URL as needed
 
   constructor(private http: HttpClient) {
   }
 
-  createOrder(): Observable<CreateOrderResponse> {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID is not available. Please log in first.');
-    }
-    return this.http.post<CreateOrderResponse>(`${this.baseUrl}`, {userId});
-  }
-
-  getCurrentOrder(): Observable<GetCurrentOrderResponse> {
-    return this.http.get<GetCurrentOrderResponse>(`${this.baseUrl}/current`);
-  }
-
-  getOrder(orderId: number): Observable<GetOrderResponse> {
-    return this.http.get<GetOrderResponse>(`${this.baseUrl}/${orderId}`);
-  }
-
-  cancelOrder(orderId: number): Observable<CancelOrderResponse> {
-    return this.http.post<CancelOrderResponse>(`${this.baseUrl}/${orderId}/cancel`, {});
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    });
   }
 
   addItemToOrder(orderId: number, productId: number, quantity: number): Observable<AddItemResponse> {
     const addItemDto: AddItemToOrderDto = {productId, quantity};
-    return this.http.post<AddItemResponse>(`${this.baseUrl}/${orderId}/items`, addItemDto);
+    return this.http.post<AddItemResponse>(`${this.baseUrl}/${orderId}/items`, addItemDto, {
+      headers: this.getAuthHeaders()
+    });
   }
 
   deleteItemFromOrder(itemId: number): Observable<DeleteItemResponse> {
-    return this.http.delete<DeleteItemResponse>(`${this.baseUrl}/items/${itemId}`);
+    return this.http.delete<DeleteItemResponse>(`${this.baseUrl}/items/${itemId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getCurrentOrder(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/current`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getAllOrders(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}`, {
+      headers: this.getAuthHeaders()
+    });
   }
 }
