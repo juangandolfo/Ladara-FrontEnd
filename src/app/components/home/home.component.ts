@@ -15,6 +15,7 @@ const SEARCH_DEBOUNCE_TIME = 300;
 const TAX_RATE = 0.08;
 const MAX_VISIBLE_PAGES = 7;
 const ALL_CATEGORIES = 'Todas';
+const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
 
 // Interfaces
 interface ProductFilters {
@@ -186,6 +187,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.router.navigate(['/mis-compras']);
   }
 
+  goHome(): void {
+    this.router.navigate(['/']).then();
+  }
+
   login(): void {
     this.authService.loginWithGoogle();
 
@@ -346,6 +351,29 @@ export class HomeComponent implements OnInit, OnDestroy {
     return Math.round(((price - discountedPrice) / price) * 100);
   }
 
+  getProductImage(product: Product | null | undefined): string {
+    return this.normalizeProductImage(product?.image);
+  }
+
+  private normalizeProductImage(image?: string | null): string {
+    const safeImage = image?.trim();
+
+    if (!safeImage) {
+      return DEFAULT_PRODUCT_IMAGE;
+    }
+
+    if (
+      safeImage.startsWith('http://') ||
+      safeImage.startsWith('https://') ||
+      safeImage.startsWith('/') ||
+      safeImage.startsWith('data:')
+    ) {
+      return safeImage;
+    }
+
+    return `/${safeImage.replace(/^\.?\//, '')}`;
+  }
+
   // Private Helper Methods
   private setupSearchDebounce(): void {
     this.searchSubject
@@ -423,10 +451,15 @@ export class HomeComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.products.set(response.data || []);
+          const normalizedProducts = (response.data || []).map(product => ({
+            ...product,
+            image: this.normalizeProductImage(product.image)
+          }));
+
+          this.products.set(normalizedProducts);
           this.totalCount.set(response.meta?.total || 0);
           // Initialize quantities for new products
-          this.initializeProductQuantities(response.data || []);
+          this.initializeProductQuantities(normalizedProducts);
         },
         error: (error) => {
           console.error('Error fetching products:', error);

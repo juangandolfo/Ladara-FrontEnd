@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 // Constants
 const TAX_RATE = 0.08;
 const MIN_QUANTITY = 1;
+const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
 
 // Interfaces
 export interface CartItem {
@@ -100,6 +101,11 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (newQuantity < 0) {
+      this.decrementQuantity(item);
+      return;
+    }
+
     this.performQuantityUpdate(item, newQuantity);
   }
 
@@ -127,8 +133,6 @@ export class CartComponent implements OnInit, OnDestroy {
           }
         }
       });
-
-
   }
 
   clearCart(): void {
@@ -199,17 +203,36 @@ export class CartComponent implements OnInit, OnDestroy {
 
   private mapOrderItemsToCartItems(orderItems: any[]): CartItem[] {
     return orderItems.map(item => ({
-      id: item.product.id,
+      id: item.id,
       name: item.product.name,
       price: this.parsePrice(item.product.price),
       discountedPrice: item.product.discountedPrice,
       quantity: item.quantity,
       category: item.product.category,
-      image: item.product.image,
+      image: this.normalizeProductImage(item.product.image),
       description: item.product.description,
       itemId: item.id,
       productId: item.product.id
     }));
+  }
+
+  private normalizeProductImage(image?: string | null): string {
+    const safeImage = image?.trim();
+
+    if (!safeImage) {
+      return DEFAULT_PRODUCT_IMAGE;
+    }
+
+    if (
+      safeImage.startsWith('http://') ||
+      safeImage.startsWith('https://') ||
+      safeImage.startsWith('/') ||
+      safeImage.startsWith('data:')
+    ) {
+      return safeImage;
+    }
+
+    return `/${safeImage.replace(/^\.?\//, '')}`;
   }
 
   private performQuantityUpdate(item: CartItem, newQuantity: number): void {
@@ -232,6 +255,36 @@ export class CartComponent implements OnInit, OnDestroy {
             this.updateLocalQuantity(item.id, newQuantity);
           } else {
             this.handleError(`Failed to update quantity: ${response.message}`);
+          }
+        }
+      });
+  }
+
+  private decrementQuantity(item: CartItem): void {
+    if (!item.itemId) {
+      this.handleError('Item ID not found for decrement');
+      return;
+    }
+
+    if (item.quantity <= 1) {
+      this.removeItem(item.id);
+      return;
+    }
+
+    this.orderService.deleteItemFromOrder(item.itemId)
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(error => {
+          this.handleError('Error decrementing quantity', error);
+          return EMPTY;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.updateLocalQuantity(item.id, -1);
+          } else {
+            this.handleError(`Failed to decrement quantity: ${response.message}`);
           }
         }
       });
@@ -283,7 +336,7 @@ export class CartComponent implements OnInit, OnDestroy {
   private updateLocalQuantity(itemId: number, newQuantity: number): void {
     this.cartItems.update(items =>
       items.map(item =>
-        item.id === itemId ? { ...item, quantity: item.quantity + newQuantity } : item
+        item.id === itemId ? { ...item, quantity: Math.max(1, item.quantity + newQuantity) } : item
       )
     );
   }

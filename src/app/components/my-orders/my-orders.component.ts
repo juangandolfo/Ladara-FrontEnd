@@ -7,7 +7,7 @@ import { OrderService } from '../../services/order.service';
 
 // Constants
 const ERROR_DISPLAY_DURATION = 5000;
-const DEFAULT_PLACEHOLDER_IMAGE = 'assets/images/placeholder.png';
+const DEFAULT_PLACEHOLDER_IMAGE = '/vacuna.jpg';
 
 // Enums
 export enum OrderStatus {
@@ -193,7 +193,22 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   }
 
   getProductImage(product: OrderProduct): string {
-    return product.image || DEFAULT_PLACEHOLDER_IMAGE;
+    const safeImage = product?.image?.trim();
+
+    if (!safeImage) {
+      return DEFAULT_PLACEHOLDER_IMAGE;
+    }
+
+    if (
+      safeImage.startsWith('http://') ||
+      safeImage.startsWith('https://') ||
+      safeImage.startsWith('/') ||
+      safeImage.startsWith('data:')
+    ) {
+      return safeImage;
+    }
+
+    return `/${safeImage.replace(/^\.?\//, '')}`;
   }
 
   // Navigation Methods

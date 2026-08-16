@@ -55,7 +55,7 @@
       <!-- Cart Items -->
       <div class="cart-item" *ngFor="let item of cartItems()">
         <div class="item-image">
-          <img [src]="item.image" [alt]="item.name" />
+          <img [src]="item.image || '/vacuna.jpg'" [alt]="item.name" (error)="item.image = '/vacuna.jpg'" />
         </div>
 
         <div class="item-details">
