@@ -66,7 +66,7 @@ describe('CartComponent', () => {
     expect(component['cartItems']()[0].quantity).toBe(1);
   });
 
-  it('should remove the row when the X button is used', () => {
+  it('should preserve a zero-quantity item in state while hiding it from the active cart view', () => {
     const orderService = {
       deleteItemFromOrder: jasmine.createSpy('deleteItemFromOrder').and.returnValue(of({ success: true }))
     };
@@ -84,6 +84,42 @@ describe('CartComponent', () => {
     component.removeItem(7);
 
     expect(orderService.deleteItemFromOrder).toHaveBeenCalledWith(99);
-    expect(component['cartItems']().length).toBe(0);
+    expect(component['cartItems']().length).toBe(1);
+    expect(component['cartItems']()[0].quantity).toBe(0);
+    expect(component['visibleCartItems']().length).toBe(0);
+  });
+
+  it('should clean zero-quantity items from the backend after loading the order', () => {
+    const orderService = {
+      getCurrentOrder: jasmine.createSpy('getCurrentOrder').and.returnValue(of({
+        success: true,
+        data: [{
+          id: 42,
+          items: [{
+            id: 99,
+            quantity: 0,
+            product: {
+              id: 5,
+              name: 'Soap',
+              price: 10,
+              category: 'Health',
+              image: '/vacuna.jpg'
+            }
+          }]
+        }]
+      })),
+      deleteItemFromOrder: jasmine.createSpy('deleteItemFromOrder').and.returnValue(of({ success: true }))
+    };
+
+    const component = new CartComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      orderService as any,
+      { isLoggedIn: () => true } as any
+    );
+
+    component['loadCurrentOrder']();
+
+    expect(orderService.deleteItemFromOrder).toHaveBeenCalledWith(99);
+    expect(component['visibleCartItems']().length).toBe(0);
   });
 });

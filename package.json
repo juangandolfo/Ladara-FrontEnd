@@ -28,6 +28,7 @@
     "@angular/forms": "^20.1.0",
     "@angular/platform-browser": "^20.1.0",
     "@angular/router": "^20.1.0",
+    "@ladara/shared-contracts": "file:../Ladara-BackEnd/documentation/frontend-contracts",
     "package.json": "^2.0.1",
     "rxjs": "~7.8.0",
     "sweetalert2": "^11.22.5",
