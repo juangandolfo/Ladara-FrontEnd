@@ -57,10 +57,8 @@ export class CartComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   // Computed properties
-  readonly visibleCartItems = computed(() => this.cartItems().filter(item => item.quantity > 0));
-
   readonly cartSummary = computed((): CartSummary => {
-    const items = this.visibleCartItems();
+    const items = this.cartItems();
 
     const subtotal = this.calculateSubtotal(items);
     const totalItems = this.calculateTotalItems(items);
@@ -77,7 +75,7 @@ export class CartComponent implements OnInit, OnDestroy {
   readonly tax = computed(() => this.cartSummary().tax);
   readonly total = computed(() => this.cartSummary().total);
 
-  readonly isEmpty = computed(() => this.visibleCartItems().length === 0);
+  readonly isEmpty = computed(() => this.cartItems().length === 0);
   readonly hasItems = computed(() => !this.isEmpty());
 
   constructor(
@@ -129,9 +127,7 @@ export class CartComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           if (response.success) {
-            this.cartItems.update(items =>
-              items.map(i => i.id === itemId ? { ...i, quantity: 0 } : i)
-            );
+            this.cartItems.update(items => items.filter(i => i.id !== itemId));
           } else {
             this.handleError(`Failed to remove item: ${response.message}`);
           }
@@ -203,7 +199,6 @@ export class CartComponent implements OnInit, OnDestroy {
 
     const mappedItems = this.mapOrderItemsToCartItems(currentOrder.items || []);
     this.cartItems.set(mappedItems);
-    this.cleanupZeroQuantityItems();
   }
 
   private mapOrderItemsToCartItems(orderItems: any[]): CartItem[] {
@@ -338,38 +333,10 @@ export class CartComponent implements OnInit, OnDestroy {
     return this.cartItems().find(item => item.id === itemId);
   }
 
-  private cleanupZeroQuantityItems(): void {
-    const zeroQuantityItems = this.cartItems().filter(item => item.quantity === 0 && item.itemId);
-
-    if (zeroQuantityItems.length === 0) {
-      return;
-    }
-
-    const deleteOperations = zeroQuantityItems.map(item =>
-      this.orderService.deleteItemFromOrder(item.itemId!).pipe(
-        takeUntil(this.destroy$),
-        catchError(error => {
-          console.warn(`Failed to clean up zero-quantity item ${item.name}`, error);
-          return of({ success: false, data: null });
-        })
-      )
-    );
-
-    forkJoin(deleteOperations)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.cartItems.update(items =>
-            items.filter(item => !(item.quantity === 0 && item.itemId && zeroQuantityItems.some(z => z.itemId === item.itemId)))
-          );
-        }
-      });
-  }
-
   private updateLocalQuantity(itemId: number, newQuantity: number): void {
     this.cartItems.update(items =>
       items.map(item =>
-        item.id === itemId ? { ...item, quantity: Math.max(0, item.quantity + newQuantity) } : item
+        item.id === itemId ? { ...item, quantity: Math.max(1, item.quantity + newQuantity) } : item
       )
     );
   }
