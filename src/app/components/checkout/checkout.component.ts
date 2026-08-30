@@ -1,12 +1,15 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // <-- Added FormsModule
 import { Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { EMPTY } from 'rxjs';
+import { OrderService } from '../../services/order.service';
+import { FormsModule } from '@angular/forms'; 
 
-// Constants
 const TAX_RATE = 0.08;
+const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
 
-// Interfaces
 export interface BillingFormData {
   firstName: string;
   lastName: string;
@@ -16,82 +19,102 @@ export interface BillingFormData {
   streetAddress2?: string;
   townCity: string;
   stateCounty: string;
+  state: string;
   postcode: string;
   phone: string;
   email: string;
   newsletter: boolean;
 }
 
-export interface CardDetails {
-  number: string;
-  exp: string;
-  csc: string;
+export interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  discountedPrice?: number;
+  quantity: number;
+  category: string;
+  image?: string;
+  description?: string;
+  itemId?: number;
+  productId?: number;
 }
 
-export interface OrderItem {
-  productName: string;
+export interface SummaryItem {
+  name: string;
   quantity: number;
-  formulation: string;
-  cbdType: string;
-  strength: string;
+  price: number;
   itemTotal: number;
+  description?: string;
 }
 
 export interface OrderSummary {
-  items: OrderItem[];
+  items: SummaryItem[];
   subtotal: number;
-  couponCode?: string;
+  couponCode: string;
   discount: number;
   tax: number;
   total: number;
-  // Added optional single-item visual fallback fields for template bindings
-  productName?: string;
-  quantity?: number;
-  itemTotal?: number;
-  formulation?: string;
-  cbdType?: string;
-  strength?: string;
 }
 
-export type PaymentMethod = 'credit_card' | 'sezzle' | 'crypto';
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, FormsModule], // <-- Added FormsModule here
+  imports: [CommonModule, FormsModule],
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.css'
 })
-export class CheckoutComponent {
-  // Signals
-  readonly cartItems = signal<OrderItem[]>([]);
+export class CheckoutComponent implements OnInit, OnDestroy {
+  readonly cartItems = signal<CartItem[]>([]);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly activeCoupon = signal<string>('DISCOUNT10'); // Managed via signal for dynamic reactivity
 
-  // Standard object mutable for template [(ngModel)] two-way binding
   formData: BillingFormData = {
     firstName: '',
     lastName: '',
     company: '',
-    country: '',
+    country: 'UY',
     streetAddress: '',
     streetAddress2: '',
     townCity: '',
     stateCounty: '',
+    state: 'Montevideo',
     postcode: '',
-    phone: '+598 99 123 456',
-    email: 'example@mycompany.com',
+    phone: '',
+    email: '',
     newsletter: false
   };
 
-  // Computed properties
+  private orderId: number | null = null;
+  private readonly destroy$ = new Subject<void>();
+
+  // Computes layout summary dynamically from cartItems signal
   readonly orderSummary = computed((): OrderSummary => {
-    const items = this.cartItems();
-    const subtotal = 100;
-    const couponCode = '';
-    const tax = subtotal * TAX_RATE;
-    const total = subtotal + tax;
-    const discount = subtotal * (this.validateCouponCode(couponCode) ? 0.1 : 0);
+    const rawItems = this.cartItems();
+    
+    const items: SummaryItem[] = rawItems.map(item => {
+      const activePrice = item.discountedPrice && item.discountedPrice > 0 ? item.discountedPrice : item.price;
+      return {
+        name: item.name,
+        quantity: item.quantity,
+        price: activePrice,
+        itemTotal: activePrice * item.quantity,
+        description: item.description
+      };
+    });
+
+    const subtotal = items.reduce((acc, curr) => acc + curr.itemTotal, 0);
+    const couponCode = this.activeCoupon();
+    const discount = this.validateCouponCode(couponCode) ? subtotal * 0.1 : 0;
+    const taxableAmount = Math.max(0, subtotal - discount);
+    const tax = taxableAmount * TAX_RATE;
+    const total = taxableAmount + tax;
 
     return {
       items,
@@ -99,42 +122,117 @@ export class CheckoutComponent {
       couponCode,
       discount,
       tax,
-      total,
-      productName: items[0]?.productName,
-      quantity: items[0]?.quantity,
-      itemTotal: items[0]?.itemTotal,
-      formulation: items[0]?.formulation,
-      cbdType: items[0]?.cbdType,
-      strength: items[0]?.strength
+      total
     };
   });
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly orderService: OrderService
+  ) {}
 
-  confirmOrder(): void {
-    alert('Order confirmed');
-    this.goHome();
+  ngOnInit(): void {
+    this.loadCurrentOrder();
   }
 
-  // Public Methods
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   onCouponClick(): void {
-    alert('Coupon code input clicked');
+    const code = prompt('Ingresa tu código de cupón:');
+    if (code) {
+      this.activeCoupon.set(code.trim());
+    }
   }
 
   onRemoveCoupon(): void {
-    alert('Coupon code removed');
+    this.activeCoupon.set('');
   }
 
   onPlaceOrder(): void {
-    alert('Order placed successfully!');
+    if (!this.orderSummary().items.length) {
+      alert('Tu carrito está vacío.');
+      return;
+    }
+    alert(`Pedido realizado con éxito por un total de $${this.orderSummary().total.toFixed(2)}`);
   }
 
   validateCouponCode(code: string): boolean {
     return code === 'DISCOUNT10';
   }
 
-  // Navigation Methods
   goHome(): void {
     this.router.navigate(['/']);
+  }
+
+  private loadCurrentOrder(): void {
+    this.isLoading.set(true);
+    this.error.set(null);
+
+    this.orderService.getCurrentOrder()
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError(error => {
+          this.handleError('Error cargando el pedido actual', error);
+          this.isLoading.set(false);
+          return EMPTY;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.processOrderResponse(response);
+          this.isLoading.set(false);
+        }
+      });
+  }
+
+  private processOrderResponse(response: ApiResponse<any[]>): void {
+    if (!response?.success || !response.data?.length) {
+      console.warn('No order found');
+      return;
+    }
+
+    const currentOrder = response.data[0];
+    this.orderId = currentOrder.id;
+
+    const mappedItems = this.mapOrderItemsToCartItems(currentOrder.items || []);
+    this.cartItems.set(mappedItems);
+  }
+
+  private mapOrderItemsToCartItems(orderItems: any[]): CartItem[] {
+    return orderItems.map(item => ({
+      id: item.id,
+      name: item.product?.name || 'Producto',
+      price: this.parsePrice(item.product?.price || 0),
+      discountedPrice: item.product?.discountedPrice ? this.parsePrice(item.product.discountedPrice) : undefined,
+      quantity: item.quantity || 1,
+      category: item.product?.category || '',
+      image: this.normalizeProductImage(item.product?.image),
+      description: item.product?.description,
+      itemId: item.id,
+      productId: item.product?.id
+    }));
+  }
+
+  private normalizeProductImage(image?: string | null): string {
+    const safeImage = image?.trim();
+    if (!safeImage) return DEFAULT_PRODUCT_IMAGE;
+    if (safeImage.startsWith('http://') || safeImage.startsWith('https://') || safeImage.startsWith('/') || safeImage.startsWith('data:')) {
+      return safeImage;
+    }
+    return `/${safeImage.replace(/^\.?\//, '')}`;
+  }
+
+  private parsePrice(price: string | number): number {
+    const parsed = typeof price === 'string' ? parseFloat(price) : price;
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  private handleError(message: string, error?: any): void {
+    console.error(message, error);
+    this.error.set(message);
+    setTimeout(() => this.error.set(null), 5000);
   }
 }

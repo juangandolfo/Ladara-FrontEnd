@@ -162,8 +162,6 @@ export class CartComponent implements OnInit, OnDestroy {
       this.handleError('Cannot proceed to checkout with empty cart');
       return;
     }
-    alert('Proceeding to checkout');
-    console.log('Proceeding to checkout with items:', this.cartItems());
     this.router.navigate(['/checkout']);
   }
 
