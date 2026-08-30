@@ -17,32 +17,32 @@
     </div>
   </div>
 
+  <!-- Notification Links -->
+  <div class="notification-links">
+    <p>Returning customer? <a href="javascript:void(0)">Click here to login</a></p>
+    <p>Have a coupon? <a href="javascript:void(0)" (click)="onCouponClick()">Click here to enter your code</a></p>
+  </div>
+
   <!-- Main Content Layout -->
   <div class="checkout-content">
     
     <!-- Left Column: Billing Details Form -->
     <div class="billing-section">
-      <div class="notification-links">
-        <p>Have a coupon? <a href="javascript:void(0)" (click)="onCouponClick()">Click here to enter your code</a></p>
-      </div>
-
-      <h3>Checkout Details</h3>
-
       <form (ngSubmit)="onPlaceOrder()" #checkoutForm="ngForm" class="checkout-form">
         <div class="form-row duo">
           <div class="form-group">
             <label for="firstName">First name *</label>
-            <input type="text" id="firstName" name="firstName" [(ngModel)]="formData.firstName" required placeholder="First name">
+            <input type="text" id="firstName" name="firstName" [(ngModel)]="formData.firstName" required>
           </div>
           <div class="form-group">
             <label for="lastName">Last name *</label>
-            <input type="text" id="lastName" name="lastName" [(ngModel)]="formData.lastName" required placeholder="Last name">
+            <input type="text" id="lastName" name="lastName" [(ngModel)]="formData.lastName" required>
           </div>
         </div>
 
         <div class="form-group">
           <label for="company">Company name (optional)</label>
-          <input type="text" id="company" name="company" [(ngModel)]="formData.company" placeholder="Company name">
+          <input type="text" id="company" name="company" [(ngModel)]="formData.company">
         </div>
 
         <div class="form-group">
@@ -63,7 +63,7 @@
 
         <div class="form-group">
           <label for="townCity">Town / City *</label>
-          <input type="text" id="townCity" name="townCity" [(ngModel)]="formData.townCity" required placeholder="Town / City">
+          <input type="text" id="townCity" name="townCity" [(ngModel)]="formData.townCity" required>
         </div>
 
         <div class="form-group">
@@ -78,17 +78,17 @@
 
         <div class="form-group">
           <label for="postcode">Postcode / ZIP *</label>
-          <input type="text" id="postcode" name="postcode" [(ngModel)]="formData.postcode" required placeholder="Postcode / ZIP">
+          <input type="text" id="postcode" name="postcode" [(ngModel)]="formData.postcode" required>
         </div>
 
         <div class="form-group">
           <label for="phone">Phone *</label>
-          <input type="tel" id="phone" name="phone" [(ngModel)]="formData.phone" required placeholder="Phone number">
+          <input type="tel" id="phone" name="phone" [(ngModel)]="formData.phone" required>
         </div>
 
         <div class="form-group">
           <label for="email">Email address *</label>
-          <input type="email" id="email" name="email" [(ngModel)]="formData.email" required placeholder="Email address">
+          <input type="email" id="email" name="email" [(ngModel)]="formData.email" required>
         </div>
 
         <div class="form-group checkbox-group">
@@ -106,24 +106,24 @@
 
       <div class="order-item-details">
         <div class="item-title">
-          <span>{{ orderSummary.productName || 'Gummies' }} × {{ orderSummary.quantity || 2 }}</span>
-          <span class="item-price">${{ orderSummary.itemTotal || '60.00' }}</span>
+          <span>{{ orderSummary().productName || 'Gummies' }} × {{ orderSummary().quantity || 2 }}</span>
+          <span class="item-price">${{ orderSummary().itemTotal || '60.00' }}</span>
         </div>
         <div class="item-attributes">
-          <p>Formulation: {{ orderSummary.formulation || 'Energy' }}</p>
-          <p>CBD Type: {{ orderSummary.cbdType || 'Pure Isolate (Zero THC)' }}</p>
-          <p>Strength: {{ orderSummary.strength || 'Regular (20mg/serving)' }}</p>
+          <p>Formulation: {{ orderSummary().formulation || 'Energy' }}</p>
+          <p>CBD Type: {{ orderSummary().cbdType || 'Pure Isolate (Zero THC)' }}</p>
+          <p>Strength: {{ orderSummary().strength || 'Regular (20mg/serving)' }}</p>
         </div>
       </div>
 
       <div class="summary-line">
         <span>Subtotal</span>
-        <span>${{ orderSummary.subtotal || '60.00' }}</span>
+        <span>${{ orderSummary().subtotal || '60.00' }}</span>
       </div>
 
       <div class="summary-line coupon-line">
-        <span>Coupon: <strong>{{ orderSummary.couponCode || 'gummy23' }}</strong></span>
-        <span>-${{ orderSummary.discount || '12.00' }} <a href="javascript:void(0)" (click)="onRemoveCoupon()">[Remove]</a></span>
+        <span>Coupon: {{ orderSummary().couponCode || 'gummy23' }}</span>
+        <span>-${{ orderSummary().discount || '12.00' }} <a href="javascript:void(0)" (click)="onRemoveCoupon()">[Remove]</a></span>
       </div>
 
       <div class="summary-line column">
@@ -133,12 +133,12 @@
 
       <div class="summary-line">
         <span>Tax</span>
-        <span>${{ orderSummary.tax || '0.00' }}</span>
+        <span>${{ orderSummary().tax || '0.00' }}</span>
       </div>
 
       <div class="summary-line total-line">
-        <strong>Total</strong>
-        <strong class="total-price">${{ orderSummary.total || '48.00' }}</strong>
+        <span>Total</span>
+        <strong class="total-price">${{ orderSummary().total || '48.00' }}</strong>
       </div>
 
       <button type="button" class="btn-place-order" (click)="onPlaceOrder()">
