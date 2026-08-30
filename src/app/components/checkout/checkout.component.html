@@ -1,0 +1,150 @@
+<div class="checkout-container">
+  <!-- Progress Stepper Header -->
+  <div class="stepper">
+    <div class="step completed">
+      <div class="circle">1</div>
+      <span class="label">Your Cart</span>
+    </div>
+    <div class="line completed"></div>
+    <div class="step active">
+      <div class="circle">2</div>
+      <span class="label">Checkout Details</span>
+    </div>
+    <div class="line"></div>
+    <div class="step disabled">
+      <div class="circle">3</div>
+      <span class="label">Order Complete</span>
+    </div>
+  </div>
+
+  <!-- Main Content Layout -->
+  <div class="checkout-content">
+    
+    <!-- Left Column: Billing Details Form -->
+    <div class="billing-section">
+      <div class="notification-links">
+        <p>Have a coupon? <a href="javascript:void(0)" (click)="onCouponClick()">Click here to enter your code</a></p>
+      </div>
+
+      <h3>Checkout Details</h3>
+
+      <form (ngSubmit)="onPlaceOrder()" #checkoutForm="ngForm" class="checkout-form">
+        <div class="form-row duo">
+          <div class="form-group">
+            <label for="firstName">First name *</label>
+            <input type="text" id="firstName" name="firstName" [(ngModel)]="formData.firstName" required placeholder="First name">
+          </div>
+          <div class="form-group">
+            <label for="lastName">Last name *</label>
+            <input type="text" id="lastName" name="lastName" [(ngModel)]="formData.lastName" required placeholder="Last name">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="company">Company name (optional)</label>
+          <input type="text" id="company" name="company" [(ngModel)]="formData.company" placeholder="Company name">
+        </div>
+
+        <div class="form-group">
+          <label for="country">Country / Region *</label>
+          <select id="country" name="country" [(ngModel)]="formData.country" required>
+            <option value="" disabled selected>Select a country / region...</option>
+            <option value="US">United States (US)</option>
+            <option value="CA">Canada</option>
+            <option value="UK">United Kingdom</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="streetAddress">Street address *</label>
+          <input type="text" id="streetAddress" name="streetAddress" [(ngModel)]="formData.streetAddress" required placeholder="House number and street name">
+          <input type="text" id="streetAddress2" name="streetAddress2" [(ngModel)]="formData.streetAddress2" placeholder="Apartment, suite, unit, etc. (optional)" class="mt-2">
+        </div>
+
+        <div class="form-group">
+          <label for="townCity">Town / City *</label>
+          <input type="text" id="townCity" name="townCity" [(ngModel)]="formData.townCity" required placeholder="Town / City">
+        </div>
+
+        <div class="form-group">
+          <label for="stateCounty">State / County *</label>
+          <select id="stateCounty" name="stateCounty" [(ngModel)]="formData.stateCounty" required>
+            <option value="" disabled selected>Select an option...</option>
+            <option value="CA">California</option>
+            <option value="NY">New York</option>
+            <option value="TX">Texas</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="postcode">Postcode / ZIP *</label>
+          <input type="text" id="postcode" name="postcode" [(ngModel)]="formData.postcode" required placeholder="Postcode / ZIP">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone *</label>
+          <input type="tel" id="phone" name="phone" [(ngModel)]="formData.phone" required placeholder="Phone number">
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email address *</label>
+          <input type="email" id="email" name="email" [(ngModel)]="formData.email" required placeholder="Email address">
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" name="newsletter" [(ngModel)]="formData.newsletter">
+            Sign me up to receive email updates and news (optional)
+          </label>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right Column: Order Summary Sidebar -->
+    <div class="order-summary-card">
+      <h3>Your order</h3>
+
+      <div class="order-item-details">
+        <div class="item-title">
+          <span>{{ orderSummary.productName || 'Gummies' }} × {{ orderSummary.quantity || 2 }}</span>
+          <span class="item-price">${{ orderSummary.itemTotal || '60.00' }}</span>
+        </div>
+        <div class="item-attributes">
+          <p>Formulation: {{ orderSummary.formulation || 'Energy' }}</p>
+          <p>CBD Type: {{ orderSummary.cbdType || 'Pure Isolate (Zero THC)' }}</p>
+          <p>Strength: {{ orderSummary.strength || 'Regular (20mg/serving)' }}</p>
+        </div>
+      </div>
+
+      <div class="summary-line">
+        <span>Subtotal</span>
+        <span>${{ orderSummary.subtotal || '60.00' }}</span>
+      </div>
+
+      <div class="summary-line coupon-line">
+        <span>Coupon: <strong>{{ orderSummary.couponCode || 'gummy23' }}</strong></span>
+        <span>-${{ orderSummary.discount || '12.00' }} <a href="javascript:void(0)" (click)="onRemoveCoupon()">[Remove]</a></span>
+      </div>
+
+      <div class="summary-line column">
+        <span>Shipping</span>
+        <span class="subtext">Enter your address to view shipping options.</span>
+      </div>
+
+      <div class="summary-line">
+        <span>Tax</span>
+        <span>${{ orderSummary.tax || '0.00' }}</span>
+      </div>
+
+      <div class="summary-line total-line">
+        <strong>Total</strong>
+        <strong class="total-price">${{ orderSummary.total || '48.00' }}</strong>
+      </div>
+
+      <button type="button" class="btn-place-order" (click)="onPlaceOrder()">
+        Place order
+      </button>
+    </div>
+
+  </div>
+</div>

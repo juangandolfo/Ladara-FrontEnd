@@ -143,16 +143,6 @@ export class CartComponent implements OnInit, OnDestroy {
     this.performBulkDelete(deleteOperations);
   }
 
-  proceedToCheckout(): void {
-    if (this.isEmpty()) {
-      this.handleError('Cannot proceed to checkout with empty cart');
-      return;
-    }
-
-    console.log('Proceeding to checkout with items:', this.cartItems());
-    // TODO: Implement checkout navigation
-  }
-
   // Navigation Methods
   goHome(): void {
     this.router.navigate(['/']);
@@ -165,6 +155,16 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
     this.router.navigate(['/my-orders']);
+  }
+
+  goToCheckout(): void {
+    if (this.isEmpty()) {
+      this.handleError('Cannot proceed to checkout with empty cart');
+      return;
+    }
+    alert('Proceeding to checkout');
+    console.log('Proceeding to checkout with items:', this.cartItems());
+    this.router.navigate(['/checkout']);
   }
 
   // Private Methods
