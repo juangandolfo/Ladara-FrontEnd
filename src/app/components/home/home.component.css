@@ -262,201 +262,303 @@
 }
 
 /* Products Grid */
+/* Typography Imports & Font Declarations */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@700&display=swap');
+
+/* Products Grid System: 24px Card Spacing Rule */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 30px;
+  gap: 24px; /* Base unit 8px * 3 */
   margin-bottom: 40px;
 }
 
+/* Product Card Component */
 .product-card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: 1px solid #f0f4f8;
+  position: relative;
+  background: #FFFFFF; /* Primary White */
+  border-radius: 16px;
+  padding: 16px; /* Base unit 8px * 2 */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid #F3F4F6; /* Secondary Light Gray */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  border-color: #e1e8f0;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(31, 41, 55, 0.08);
 }
 
-.product-image {
-  position: relative;
-  height: 220px;
-  overflow: hidden;
-  background: #f8fafc;
-}
-
-.product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.product-card:hover .product-image img {
-  transform: scale(1.03);
-}
-
-.discount-badge {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: #e74c3c;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.2);
-}
-
-.product-info {
-  padding: 25px;
-}
-
-.product-name {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0 0 10px 0;
-  line-height: 1.4;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.product-type {
-  background: #ecf0f1;
-  color: #5d6d7e;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  display: inline-block;
-  margin-bottom: 15px;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-.price-quantity-row {
+/* Card Header Action Row */
+.card-header-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  gap: 15px;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 2;
 }
 
-.price-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-}
-
-/* Quantity Section for Product Cards */
-.quantity-section {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.quantity-section .quantity-controls {
-  display: flex;
-  align-items: center;
-  background: #f8fafc;
+/* Offer Tag: Primary Violet */
+.offer-tag {
+  background: #6D28D9; /* Primary Violet */
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; /* UI Text */
+  font-size: 0.7rem;
+  padding: 4px 10px;
   border-radius: 8px;
-  padding: 4px;
-  border: 1px solid #e8eef5;
-  width: fit-content;
+  letter-spacing: 0.5px;
 }
 
-.quantity-section .quantity-btn {
-  width: 35px;
-  height: 35px;
+/* Wishlist Button with Keyboard Support & Focus States */
+.wishlist-btn {
+  background: transparent;
   border: none;
-  background: white;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1F2937; /* Secondary Dark Gray */
+  transition: color 0.2s ease;
+  border-radius: 4px;
+}
+
+.wishlist-btn:focus-visible {
+  outline: 2px solid #6D28D9; /* Visible focus state */
+  outline-offset: 2px;
+}
+
+.wishlist-btn:hover {
+  color: #DC2626; /* Error Red Accent for hover */
+}
+
+.heart-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Product Image Box */
+.product-image {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.product-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Content Information Block */
+.product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* Base unit 8px */
+}
+
+/* Heading Typography */
+.product-name {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700; /* Poppins Bold */
+  font-size: 1rem;
+  color: #1F2937; /* Dark Gray (High contrast) */
+  margin: 0;
+  line-height: 1.3;
+}
+
+.sku-text {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400; /* Body Regular */
+  font-size: 0.75rem;
+  color: #1F2937;
+  opacity: 0.7;
+  margin: 0;
+}
+
+/* Ratings Component */
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stars {
+  color: #F59E0B; /* Warning Orange Accent */
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
+
+.rating-count {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500; /* UI Text */
+  font-size: 0.8rem;
+  color: #1F2937;
+}
+
+/* Pricing Section */
+.price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.price-wrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.discounted-price {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #6D28D9; /* Primary Violet */
+}
+
+.original-price {
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: #1F2937;
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.discount-pill {
+  background: #F3F4F6; /* Light Gray */
+  color: #16A34A; /* Success Green Accent */
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 4px 8px;
   border-radius: 6px;
+}
+
+/* Stock Status Indicator */
+.stock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #16A34A; /* Success Green Accent */
+  border-radius: 50%;
+}
+
+.status-text {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: #16A34A; /* Success Green Accent */
+}
+
+/* Action Block: Quantity Field & Add Button */
+.card-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  border: 1px solid #F3F4F6;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 40px;
+  flex: 1;
+  background: #FFFFFF;
+}
+
+.quantity-btn {
+  width: 32px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #1F2937;
   font-size: 1.1rem;
-  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  color: #4a6fa5;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background 0.2s ease;
 }
 
-.quantity-section .quantity-btn:hover:not(:disabled) {
-  background: #4a6fa5;
-  color: white;
+.quantity-btn:hover:not(:disabled) {
+  background: #F3F4F6;
 }
 
-.quantity-section .quantity-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  color: #bdc3c7;
-}
-
-.quantity-section .quantity {
-  min-width: 40px;
-  text-align: center;
-  font-weight: 600;
-  color: #2c3e50;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+.quantity-btn:focus-visible {
+  outline: 2px solid #6D28D9;
 }
 
 .quantity-input {
-  min-width: 40px;
-  width: 40px;
-  text-align: center;
-  font-weight: 600;
-  color: #2c3e50;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: inherit;
-  padding: 0;
-  margin: 0;
-}
-
-.quantity-input:focus {
-  background: rgba(74, 111, 165, 0.1);
-  border-radius: 4px;
-}
-
-/* Remove spinner arrows from number input */
-.quantity-input::-webkit-outer-spin-button,
-.quantity-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.quantity-input[type=number] {
-  -moz-appearance: textfield;
-}
-
-.add-to-cart-btn {
   width: 100%;
-  padding: 15px;
-  background: #4a6fa5;
-  color: white;
+  height: 100%;
+  border: none;
+  border-left: 1px solid #F3F4F6;
+  border-right: 1px solid #F3F4F6;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #1F2937;
+  outline: none;
+}
+
+.quantity-input:focus-visible {
+  background: #F3F4F6;
+}
+
+/* Primary Button Component: Lime Green */
+.cart-action-btn {
+  width: 48px;
+  height: 40px;
+  background: #84CC16; /* Primary Lime Green */
   border: none;
   border-radius: 8px;
-  font-weight: 500;
-  font-size: 1rem;
+  color: #1F2937; /* Dark Gray for 4.5:1 Contrast Ratio against Lime Green */
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: opacity 0.2s ease, transform 0.1s ease;
 }
 
-.add-to-cart-btn:hover {
-  background: #3d5a8a;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
+.cart-action-btn:hover {
+  opacity: 0.9;
+}
+
+.cart-action-btn:focus-visible {
+  outline: 2px solid #6D28D9; /* Visible Focus State */
+  outline-offset: 2px;
+}
+
+.cart-action-btn:active {
+  transform: scale(0.96);
+}
+
+.cart-btn-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* No Results */
