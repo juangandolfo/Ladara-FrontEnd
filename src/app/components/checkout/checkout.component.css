@@ -5,36 +5,48 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Header */
+/* Header Layout & Styling */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
-  border-bottom: 2px solid #e8eef5;
-  margin-bottom: 30px;
+  padding-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-secondary-border);
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--spacing-md);
   cursor: pointer;
   user-select: none;
 }
 
-.logo h1 {
-  color: #4a6fa5;
-  font-size: 2.2rem;
-  font-weight: 600;
+.header-logo-img {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  transition: opacity var(--transition-fast);
+}
+
+.brand-name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: var(--color-primary-violet);
   margin: 0;
-  letter-spacing: -0.5px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  letter-spacing: -0.02em;
+  transition: color var(--transition-fast);
+}
+
+.logo:hover .header-logo-img {
+  opacity: 0.85;
 }
 
 .header-actions {
   display: flex;
-  gap: 15px;
+  gap: var(--spacing-md);
   align-items: center;
 }
 
@@ -225,74 +237,93 @@
   margin: 0 0 25px 0;
 }
 
+/* Order Item Details Styling */
 .order-item-details {
-  border-bottom: 1px solid #e8eef5;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
+  padding: 4px 0;
+  margin-bottom: 8px;
 }
 
 .item-title {
   display: flex;
   justify-content: space-between;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 6px;
+  font-size: 0.875rem;
+  color: #6B7280;
+  font-weight: 400;
 }
 
-.item-attributes p {
-  margin: 3px 0;
-  font-size: 0.85rem;
-  color: #7f8c8d;
+.item-price-val {
+  color: #6B7280;
 }
 
+.order-items-divider {
+  height: 1px;
+  background-color: var(--color-secondary-border);
+  margin: var(--spacing-sm) 0 var(--spacing-md) 0;
+}
+
+/* Summary Rows: Normal Black */
 .summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  padding: 8px 0;
   font-size: 1rem;
+  color: var(--color-secondary-dark);
+  font-weight: 400;
 }
 
-.summary-row span:first-child {
-  color: #7f8c8d;
-}
-
+.summary-row span:first-child,
 .summary-row span:last-child {
-  font-weight: 600;
-  color: #2c3e50;
+  color: var(--color-secondary-dark);
 }
 
 .coupon-row .coupon-val {
-  color: #e74c3c;
+  color: var(--color-error);
 }
 
 .coupon-row a {
-  color: #e74c3c;
+  color: var(--color-error);
   font-size: 0.85rem;
   text-decoration: underline;
 }
 
 .summary-divider {
   height: 1px;
-  background: #e8eef5;
-  margin: 20px 0;
+  background-color: var(--color-secondary-border);
+  margin: var(--spacing-md) 0;
 }
 
-.summary-row.total {
-  font-size: 1.2rem;
+/* Total Row: Bold Black */
+.summary-row.total,
+.summary-row.total .total-price-val {
+  font-size: 1.125rem;
   font-weight: 700;
-  color: #2c3e50;
-  margin-top: 10px;
-}
-
-.total-price-val {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #2c3e50;
+  color: var(--color-secondary-dark);
 }
 
 .checkout-actions {
-  margin-top: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.coupon-action-text {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #6B7280;
+  margin-top: 4px;
+}
+
+.coupon-action-text a {
+  color: var(--color-primary-violet);
+  font-weight: 500;
+  text-decoration: underline;
+  transition: color var(--transition-fast);
+}
+
+.coupon-action-text a:hover {
+  color: var(--color-primary-violet-hover);
 }
 
 .checkout-btn {
@@ -312,6 +343,10 @@
   background: #3d5a8a;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
+}
+
+.info-card {
+  border-top: 4px solid var(--color-primary-lime);
 }
 
 /* Responsive adjustments */
@@ -337,4 +372,163 @@
   .checkout-form .form-row.duo {
     grid-template-columns: 1fr;
   }
+}
+
+/* Ensure design system floating label styles take precedence */
+.form-floating {
+  position: relative;
+  margin-bottom: var(--spacing-lg);
+}
+
+.form-floating input,
+.form-floating select {
+  height: 54px !important;
+  padding: 20px 12px 6px 12px !important;
+  font-family: var(--font-body) !important;
+}
+
+.form-floating label {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  color: #6b7280;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+/* Floating animation fix */
+.form-floating input:focus ~ label,
+.form-floating input:not(:placeholder-shown) ~ label,
+.form-floating select:focus ~ label,
+.form-floating select:not([value=""]) ~ label {
+  transform: translateY(-10px);
+  font-size: 0.75rem;
+  color: var(--color-primary-violet) !important;
+  font-weight: 600;
+}
+
+/* Button & Color System Alignment */
+.checkout-btn {
+  background-color: var(--color-primary-lime) !important;
+  color: var(--color-secondary-dark) !important;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.checkout-btn:hover:not(:disabled) {
+  background-color: var(--color-primary-lime-hover) !important;
+}
+
+.stepper .step.active .circle {
+  background-color: var(--color-primary-violet) !important;
+  color: var(--color-white) !important;
+}
+
+.stepper .line.completed {
+  background-color: var(--color-primary-violet) !important;
+}
+
+/* Notification Info Card Styling */
+.notification-links.info-card {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-secondary-border);
+  border-top: 4px solid var(--color-primary-lime) !important;
+  border-left: none !important;
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.notification-links p {
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-secondary-dark);
+  font-family: var(--font-body);
+}
+
+.notification-links p:last-child {
+  margin-bottom: 0;
+}
+
+.notification-links a {
+  color: var(--color-primary-violet);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.notification-links a:hover {
+  color: var(--color-primary-violet-hover);
+}
+
+/* Header Layout & Typography */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-secondary-border);
+}
+
+.header .logo h1 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 2rem;
+  color: var(--color-secondary-dark);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Back Button System Override */
+.continue-shopping-btn.btn-secondary {
+  border-color: var(--color-primary-violet);
+  color: var(--color-primary-violet);
+  background-color: transparent;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.continue-shopping-btn.btn-secondary:hover {
+  background-color: rgba(109, 40, 217, 0.08);
+  color: var(--color-primary-violet-hover);
+  border-color: var(--color-primary-violet-hover);
+}
+
+/* Fix select appearance and layout inside form-floating */
+/* Fix select background and styling inside form-floating */
+.form-floating select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #F9FAFB !important; /* Matches light grey input background */
+  border: 1px solid var(--color-secondary-border) !important;
+  border-radius: var(--radius-md) !important;
+  height: 54px !important;
+  padding: 20px 36px 6px 12px !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 16px 12px !important;
+}
+
+/* Maintain light grey background on focus */
+.form-floating select:focus {
+  background-color: #F9FAFB !important;
+  border-color: var(--color-primary-violet) !important;
+  outline: none !important;
+}
+
+/* Ensure validation states apply correctly to select */
+.form-floating select.is-invalid {
+  border-color: var(--color-error) !important;
+}
+
+.form-floating select.is-valid {
+  border-color: var(--color-success) !important;
 }

@@ -32,6 +32,7 @@ export interface Product {
   image: string;
   discountedPrice: number;
   deletedAt?: string;
+  sku?: string;
 }
 
 export interface FilterMeta {

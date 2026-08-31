@@ -1,73 +1,91 @@
 <div class="cart-container">
-  <!-- Header -->
-  <div class="header">
-    <div class="logo" (click)="goHome()">
-      <h1>Checkout</h1>
-    </div>
-    <div class="header-actions">
-      <button class="continue-shopping-btn" (click)="goHome()">
-        <span>← Volver a la tienda</span>
-      </button>
-    </div>
+<!-- Header -->
+<div class="header">
+  <div class="logo" (click)="goHome()">
+    <img src="assets/images/logo.png" alt="Ladara Logo" class="header-logo-img" />
+    <h1 class="brand-name">LADARA</h1>
   </div>
+  <div class="header-actions">
+    <button type="button" class="btn btn-secondary continue-shopping-btn" (click)="goHome()">
+      <span>← Volver a la tienda</span>
+    </button>
+  </div>
+</div>
 
-  <!-- Stepper Header -->
-  <div class="stepper">
-    <div class="step completed">
-      <div class="circle">1</div>
-      <span class="label">Carrito</span>
-    </div>
-    <div class="line completed"></div>
-    <div class="step active">
-      <div class="circle">2</div>
-      <span class="label">Detalles de Envío</span>
-    </div>
-    <div class="line"></div>
-    <div class="step disabled">
-      <div class="circle">3</div>
-      <span class="label">Pedido Confirmado</span>
-    </div>
-  </div>
-
-  <!-- Notification Links -->
-  <div class="notification-links">
-    <p>¿Ya tienes cuenta? <a href="javascript:void(0)">Haz clic aquí para iniciar sesión</a></p>
-    <p>¿Tienes un cupón? <a href="javascript:void(0)" (click)="onCouponClick()">Ingresa tu código aquí</a></p>
-  </div>
 
   <!-- Main Grid Content -->
   <div class="cart-content">
     
     <!-- Left Column: Form -->
     <div class="billing-section">
-      <form (ngSubmit)="onPlaceOrder()" #checkoutForm="ngForm" class="checkout-form">
+      <form (ngSubmit)="onPlaceOrder()" #checkoutForm="ngForm" class="checkout-form" novalidate>
         <div class="form-row duo">
-          <div class="form-group">
+          <div class="form-group form-floating">
+            <input 
+              type="text" 
+              id="firstName" 
+              name="firstName" 
+              [(ngModel)]="formData.firstName" 
+              #firstName="ngModel"
+              [class.is-invalid]="firstName.invalid && (firstName.dirty || firstName.touched || checkoutForm.submitted)"
+              [class.is-valid]="firstName.valid && (firstName.dirty || firstName.touched)"
+              placeholder=" " 
+              required>
             <label for="firstName">Nombre *</label>
-            <input type="text" id="firstName" name="firstName" [(ngModel)]="formData.firstName" required>
+            <div class="invalid-feedback">Por favor ingrese su nombre.</div>
           </div>
-          <div class="form-group">
+
+          <div class="form-group form-floating">
+            <input 
+              type="text" 
+              id="lastName" 
+              name="lastName" 
+              [(ngModel)]="formData.lastName" 
+              #lastName="ngModel"
+              [class.is-invalid]="lastName.invalid && (lastName.dirty || lastName.touched || checkoutForm.submitted)"
+              [class.is-valid]="lastName.valid && (lastName.dirty || lastName.touched)"
+              placeholder=" " 
+              required>
             <label for="lastName">Apellido *</label>
-            <input type="text" id="lastName" name="lastName" [(ngModel)]="formData.lastName" required>
+            <div class="invalid-feedback">Por favor ingrese su apellido.</div>
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group form-floating">
+          <input 
+            type="text" 
+            id="company" 
+            name="company" 
+            [(ngModel)]="formData.company" 
+            placeholder=" ">
           <label for="company">Empresa (opcional)</label>
-          <input type="text" id="company" name="company" [(ngModel)]="formData.company">
         </div>
 
         <div class="form-row duo">
-          <div class="form-group">
-            <label for="country">País / Región *</label>
-            <select id="country" name="country" [(ngModel)]="formData.country" required>
+          <div class="form-group form-floating">
+            <select 
+              id="country" 
+              name="country" 
+              [(ngModel)]="formData.country" 
+              #country="ngModel"
+              [class.is-invalid]="country.invalid && (country.dirty || country.touched || checkoutForm.submitted)"
+              [class.is-valid]="country.valid && (country.dirty || country.touched)"
+              required>
               <option value="UY">Uruguay</option>
             </select>
+            <label for="country">País / Región *</label>
+            <div class="invalid-feedback">Por favor seleccione un país.</div>
           </div>
 
-          <div class="form-group">
-            <label for="state">Departamento *</label>
-            <select id="state" name="state" [(ngModel)]="formData.state" required>
+          <div class="form-group form-floating">
+            <select 
+              id="state" 
+              name="state" 
+              [(ngModel)]="formData.state" 
+              #state="ngModel"
+              [class.is-invalid]="state.invalid && (state.dirty || state.touched || checkoutForm.submitted)"
+              [class.is-valid]="state.valid && (state.dirty || state.touched)"
+              required>
               <option value="Montevideo">Montevideo</option>
               <option value="Artigas">Artigas</option>
               <option value="Canelones">Canelones</option>
@@ -88,35 +106,97 @@
               <option value="Tacuarembó">Tacuarembó</option>
               <option value="Treinta y Tres">Treinta y Tres</option>
             </select>
+            <label for="state">Departamento *</label>
+            <div class="invalid-feedback">Por favor seleccione un departamento.</div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="streetAddress">Dirección *</label>
-          <input type="text" id="streetAddress" name="streetAddress" [(ngModel)]="formData.streetAddress" required placeholder="Calle y número de puerta">
-          <input type="text" id="streetAddress2" name="streetAddress2" [(ngModel)]="formData.streetAddress2" placeholder="Apartamento, suite, etc. (opcional)" class="mt-2">
+        <div class="form-group form-floating">
+          <input 
+            type="text" 
+            id="streetAddress" 
+            name="streetAddress" 
+            [(ngModel)]="formData.streetAddress" 
+            #streetAddress="ngModel"
+            [class.is-invalid]="streetAddress.invalid && (streetAddress.dirty || streetAddress.touched || checkoutForm.submitted)"
+            [class.is-valid]="streetAddress.valid && (streetAddress.dirty || streetAddress.touched)"
+            placeholder=" " 
+            required>
+          <label for="streetAddress">Dirección (Calle y número) *</label>
+          <div class="invalid-feedback">Por favor ingrese su dirección.</div>
+        </div>
+
+        <div class="form-group form-floating">
+          <input 
+            type="text" 
+            id="streetAddress2" 
+            name="streetAddress2" 
+            [(ngModel)]="formData.streetAddress2" 
+            placeholder=" ">
+          <label for="streetAddress2">Apartamento, suite, etc. (opcional)</label>
         </div>
 
         <div class="form-row duo">
-          <div class="form-group">
+          <div class="form-group form-floating">
+            <input 
+              type="text" 
+              id="townCity" 
+              name="townCity" 
+              [(ngModel)]="formData.townCity" 
+              #townCity="ngModel"
+              [class.is-invalid]="townCity.invalid && (townCity.dirty || townCity.touched || checkoutForm.submitted)"
+              [class.is-valid]="townCity.valid && (townCity.dirty || townCity.touched)"
+              placeholder=" " 
+              required>
             <label for="townCity">Ciudad *</label>
-            <input type="text" id="townCity" name="townCity" [(ngModel)]="formData.townCity" required>
+            <div class="invalid-feedback">Por favor ingrese la ciudad.</div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group form-floating">
+            <input 
+              type="text" 
+              id="postcode" 
+              name="postcode" 
+              [(ngModel)]="formData.postcode" 
+              #postcode="ngModel"
+              [class.is-invalid]="postcode.invalid && (postcode.dirty || postcode.touched || checkoutForm.submitted)"
+              [class.is-valid]="postcode.valid && (postcode.dirty || postcode.touched)"
+              placeholder=" " 
+              required>
             <label for="postcode">Código Postal *</label>
-            <input type="text" id="postcode" name="postcode" [(ngModel)]="formData.postcode" required>
+            <div class="invalid-feedback">Por favor ingrese el código postal.</div>
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group form-floating">
+          <input 
+            type="tel" 
+            id="phone" 
+            name="phone" 
+            [(ngModel)]="formData.phone" 
+            #phone="ngModel"
+            [class.is-invalid]="phone.invalid && (phone.dirty || phone.touched || checkoutForm.submitted)"
+            [class.is-valid]="phone.valid && (phone.dirty || phone.touched)"
+            placeholder=" " 
+            required>
           <label for="phone">Teléfono *</label>
-          <input type="tel" id="phone" name="phone" [(ngModel)]="formData.phone" required>
+          <div class="invalid-feedback">Por favor ingrese un número de teléfono válido.</div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group form-floating">
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            [(ngModel)]="formData.email" 
+            #email="ngModel"
+            [class.is-invalid]="email.invalid && (email.dirty || email.touched || checkoutForm.submitted)"
+            [class.is-valid]="email.valid && (email.dirty || email.touched)"
+            placeholder=" " 
+            email
+            required>
           <label for="email">Correo Electrónico *</label>
-          <input type="email" id="email" name="email" [(ngModel)]="formData.email" required>
+          <div class="invalid-feedback">Por favor ingrese un correo electrónico válido.</div>
         </div>
 
         <div class="form-group checkbox-group">
@@ -140,16 +220,14 @@
         No hay productos en el carrito.
       </div>
 
-      <!-- Iterates dynamically through retrieved items -->
       <div class="order-item-details" *ngFor="let item of orderSummary().items">
         <div class="item-title">
           <span>{{ item.name }} × {{ item.quantity }}</span>
           <span class="item-price-val">{{ item.itemTotal | currency }}</span>
         </div>
-        <div class="item-attributes" *ngIf="item.description">
-          <p>{{ item.description }}</p>
-        </div>
       </div>
+
+      <div class="order-items-divider" *ngIf="orderSummary().items.length > 0"></div>
 
       <div class="summary-row">
         <span>Subtotal</span>
@@ -174,9 +252,13 @@
       </div>
 
       <div class="checkout-actions">
-        <button type="button" class="checkout-btn" (click)="onPlaceOrder()" [disabled]="isLoading() || orderSummary().items.length === 0">
+        <button type="button" class="btn btn-primary checkout-btn" (click)="onPlaceOrder()" [disabled]="isLoading() || orderSummary().items.length === 0">
           Realizar Pedido
         </button>
+        
+        <p class="coupon-action-text">
+          ¿Tienes un cupón? <a href="javascript:void(0)" (click)="onCouponClick()">Ingresa tu código aquí</a>
+        </p>
       </div>
     </div>
 
