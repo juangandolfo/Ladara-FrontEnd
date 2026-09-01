@@ -126,6 +126,7 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--spacing-sm);
   font-family: var(--font-ui);
   font-weight: 500;
   font-size: 0.95rem;

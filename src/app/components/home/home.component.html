@@ -1,41 +1,41 @@
 <div class="home-container">
   <!-- Header -->
   <header class="sticky-header">
-  <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
-    <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
-    <h1>Ladara</h1>
-  </div>
-  
-  <div class="header-actions">
-    <button class="btn btn-secondary" *ngIf="!isLoggedIn()" (click)="login()">
-      <span class="btn-icon login-icon" aria-hidden="true"></span>
-      Inicia sesión
-    </button>
-
-    <button class="btn btn-ghost" *ngIf="isLoggedIn()" (click)="logout()">
-      <span class="btn-icon logout-icon" aria-hidden="true"></span>
-      Cerrar sesión
-    </button>
+    <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
+      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
+      <h1>Ladara</h1>
+    </div>
     
-    <button class="btn btn-ghost" *ngIf="isLoggedIn()" (click)="goToOrders()">
-      <span class="btn-icon orders-icon" aria-hidden="true"></span>
-      Mis Órdenes
-    </button>
+    <div class="header-actions">
+      <button class="btn btn-secondary" *ngIf="!isLoggedIn()" (click)="login()">
+        <span class="btn-icon login-icon" aria-hidden="true"></span>
+        Inicia sesión
+      </button>
 
-    <button class="btn btn-primary" (click)="goToCart()" aria-label="Ver Carrito">
-      <span class="btn-icon btn-icon-dark cart-icon" aria-hidden="true"></span>
-      <span>Carrito</span>
-    </button>
-  </div>
-</header>
+      <button class="btn btn-ghost" *ngIf="isLoggedIn()" (click)="logout()">
+        <span class="btn-icon logout-icon" aria-hidden="true"></span>
+        Cerrar sesión
+      </button>
+      
+      <button class="btn btn-ghost" *ngIf="isLoggedIn()" (click)="goToOrders()">
+        <span class="btn-icon orders-icon" aria-hidden="true"></span>
+        Mis Órdenes
+      </button>
 
-<!-- Hero Section -->
-<div 
+      <button class="btn btn-primary" (click)="goToCart()" aria-label="Ver Carrito">
+        <span class="btn-icon btn-icon-dark cart-icon" aria-hidden="true"></span>
+        <span>Carrito</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <div 
     class="hero-wrapper"
     [ngStyle]="{
-    'opacity': heroOpacity(),
-    'transform': 'scale(' + heroScale() + ')'
-  }"
+      'opacity': heroOpacity(),
+      'transform': 'scale(' + heroScale() + ')'
+    }"
   >
     <section class="hero-section">
       <div class="hero-content">
@@ -48,10 +48,10 @@
           Calidad, disponibilidad y atención profesional para tu consultorio, clínica o empresa.
         </p>
         <div class="hero-actions">
-          <button class="btn-primary" (click)="scrollToGallery()">
+          <button class="btn btn-primary" (click)="scrollToGallery()">
             VER PRODUCTOS
           </button>
-          <button class="btn-secondary" (click)="requestQuote()">
+          <button class="btn btn-secondary" (click)="requestQuote()">
             SOLICITAR COTIZACIÓN
           </button>
         </div>
@@ -59,7 +59,7 @@
 
       <div class="hero-image-container">
         <img 
-          src="assets/images/hero-medical-supplies.png" 
+          src="/assets/images/hero-medical-supplies.png" 
           alt="Insumos Médicos - Guantes, Mascarillas y Jeringas" 
           class="hero-image"
         >
@@ -68,7 +68,7 @@
 
     <section class="features-bar">
       <div class="feature-item">
-        <div class="feature-icon-wrapper green">
+        <div class="feature-icon-wrapper feature-icon-lime">
           <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M20 6L9 17l-5-5"/>
           </svg>
@@ -80,7 +80,7 @@
       </div>
 
       <div class="feature-item">
-        <div class="feature-icon-wrapper purple">
+        <div class="feature-icon-wrapper feature-icon-violet">
           <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             <path d="M9 12l2 2 4-4"/>
@@ -93,7 +93,7 @@
       </div>
 
       <div class="feature-item">
-        <div class="feature-icon-wrapper green">
+        <div class="feature-icon-wrapper feature-icon-lime">
           <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <rect x="1" y="3" width="15" height="13"/>
             <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
@@ -108,7 +108,7 @@
       </div>
 
       <div class="feature-item">
-        <div class="feature-icon-wrapper purple">
+        <div class="feature-icon-wrapper feature-icon-violet">
           <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
             <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2H3z"/>
