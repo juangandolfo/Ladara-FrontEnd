@@ -1,4 +1,4 @@
-import { Component, computed, OnInit, signal, OnDestroy } from '@angular/core';
+import { Component, computed, OnInit, signal, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -51,6 +51,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   readonly isLoading = signal(false);
   readonly isLoggedIn = signal(false);
   readonly productQuantities = signal<Map<number, number>>(new Map());
+  heroOpacity = signal(1);
+  heroScale = signal(1);
+  heroTranslateY = signal(0);
 
   // Private properties
   private currentOrderId: number | null = null;
@@ -108,6 +111,38 @@ export class HomeComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  // HostListener for scroll events to adjust hero section
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    const scrollY = window.scrollY || window.pageYOffset;
+    // Fade out completely over 400px of scrolling
+    const fadeDistance = 700;
+
+    if (scrollY <= fadeDistance) {
+      const progress = scrollY / fadeDistance;
+      this.heroOpacity.set(1 - progress);
+      this.heroScale.set(1 - progress * 0.25); // Scales down from 1 to 0.92
+      this.heroTranslateY.set(scrollY * 0.1); // Parallax effect pushing it slightly down
+    } else {
+      this.heroOpacity.set(0);
+      this.heroScale.set(0.95);
+    }
+  }
+
+  scrollToGallery() {
+    const galleryElement = document.getElementById('products-grid');
+    if (galleryElement) {
+      galleryElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  scrollToTop(): void {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }
 
   // Search and Filter Methods
@@ -353,19 +388,6 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   getProductImage(product: Product | null | undefined): string {
     return this.normalizeProductImage(product?.image);
-  }
-
-  scrollToGallery(): void {
-    document.querySelector('.gallery')?.scrollIntoView({
-      behavior: 'smooth'
-    });
-  }
-
-  scrollToTop(): void {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
   }
 
   requestQuote(): void {

@@ -1,150 +1,132 @@
 <div class="home-container">
   <!-- Header -->
-  <header class="header">
-    <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
-      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
-      <h1>Ladara</h1>
-    </div>
-    <div class="header-actions">
-      <button class="login-btn" *ngIf="!isLoggedIn()" (click)="login()">
-        <img src="assets/images/login.svg" alt="" aria-hidden="true" class="logout-icon">
-        Inicia sesión
-      </button>
-      <button class="login-btn" *ngIf="isLoggedIn()" (click)="logout()">
-        <img src="assets/images/logout.svg" alt="" aria-hidden="true" class="login-icon">
-        Cerrar sesión
-      </button>
-      <button class="orders-btn" *ngIf="isLoggedIn()" (click)="goToOrders()">
-        <img src="assets/images/mis-compras.svg" alt="" aria-hidden="true" class="orders-icon">
-        Mis Órdenes
-      </button>
-      <button class="cart-btn" (click)="goToCart()" aria-label="Ver Carrito">
-        <img src="assets/images/cart.svg" alt="" aria-hidden="true" class="cart-icon">
-        <span>Carrito</span>
-      </button>
-    </div>
-  </header>
+  <header class="sticky-header">
+  <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
+    <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
+    <h1>Ladara</h1>
+  </div>
+  
+  <div class="header-actions">
+    <button class="btn btn-secondary" *ngIf="!isLoggedIn()" (click)="login()">
+      <span class="btn-icon login-icon" aria-hidden="true"></span>
+      Inicia sesión
+    </button>
 
-  <!-- Place inside .home-container directly after </header> -->
+    <button class="btn btn-ghost" *ngIf="isLoggedIn()" (click)="logout()">
+      <span class="btn-icon logout-icon" aria-hidden="true"></span>
+      Cerrar sesión
+    </button>
+    
+    <button class="btn btn-ghost" *ngIf="isLoggedIn()" (click)="goToOrders()">
+      <span class="btn-icon orders-icon" aria-hidden="true"></span>
+      Mis Órdenes
+    </button>
+
+    <button class="btn btn-primary" (click)="goToCart()" aria-label="Ver Carrito">
+      <span class="btn-icon btn-icon-dark cart-icon" aria-hidden="true"></span>
+      <span>Carrito</span>
+    </button>
+  </div>
+</header>
 
 <!-- Hero Section -->
-<section class="hero-section">
-  <div class="hero-content">
-    <h2 class="hero-title">
-      Insumos médicos <br>
-      en los que puedes <br>
-      confiar
-    </h2>
-    <p class="hero-subtitle">
-      Calidad, disponibilidad y atención profesional para tu consultorio, clínica o empresa.
-    </p>
-    <div class="hero-actions">
-      <button class="btn-primary" (click)="scrollToGallery()">
-        VER PRODUCTOS
-      </button>
-      <button class="btn-secondary" (click)="requestQuote()">
-        SOLICITAR COTIZACIÓN
-      </button>
-    </div>
-  </div>
-
-  <div class="hero-image-container">
-    <img 
-      src="assets/images/hero-medical-supplies.png" 
-      alt="Insumos Médicos - Guantes, Mascarillas y Jeringas" 
-      class="hero-image"
-    >
-  </div>
-</section>
-
-<!-- Features Bar -->
-<section class="features-bar">
-  <div class="feature-item">
-    <div class="feature-icon-wrapper green">
-      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M20 6L9 17l-5-5"/>
-      </svg>
-    </div>
-    <div class="feature-text">
-      <strong>Productos de Calidad</strong>
-      <p>Selección de las mejores marcas internacionales.</p>
-    </div>
-  </div>
-
-  <div class="feature-item">
-    <div class="feature-icon-wrapper purple">
-      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        <path d="M9 12l2 2 4-4"/>
-      </svg>
-    </div>
-    <div class="feature-text">
-      <strong>Precios y Descuentos B2B</strong>
-      <p>Precios especiales para clientes registrados.</p>
-    </div>
-  </div>
-
-  <div class="feature-item">
-    <div class="feature-icon-wrapper green">
-      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <rect x="1" y="3" width="15" height="13"/>
-        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-        <circle cx="5.5" cy="18.5" r="2.5"/>
-        <circle cx="18.5" cy="18.5" r="2.5"/>
-      </svg>
-    </div>
-    <div class="feature-text">
-      <strong>Opciones de Entrega</strong>
-      <p>Envíos a todo el país o retiro en local.</p>
-    </div>
-  </div>
-
-  <div class="feature-item">
-    <div class="feature-icon-wrapper purple">
-      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
-      </svg>
-    </div>
-    <div class="feature-text">
-      <strong>Atención Personalizada</strong>
-      <p>Estamos para ayudarte en lo que necesites.</p>
-    </div>
-  </div>
-</section>
-
-  <!-- Search and Filter Section -->
-  <div class="search-filter-section">
-    <div class="search-container">
-      <input
-        type="text"
-        placeholder="Búsqueda de productos..."
-        class="search-input"
-        [value]="searchTerm()"
-        (input)="onSearch($event)"
-        aria-label="Buscar productos"
-      >
-    </div>
-
-    <div class="filter-container">
-      <button class="filter-btn" (click)="toggleFilters()">
-        Filtrar
-      </button>
-
-      <div class="filter-dropdown" [class.show]="showFilters()">
-        <div
-          class="filter-option"
-          *ngFor="let category of categories()"
-          (click)="onCategoryFilter(category)"
-          (keydown.enter)="onCategoryFilter(category)"
-          tabindex="0"
-          role="button"
-          [class.selected]="selectedCategory() === category"
-        >
-          {{ category }}
+<div 
+    class="hero-wrapper"
+    [ngStyle]="{
+    'opacity': heroOpacity(),
+    'transform': 'scale(' + heroScale() + ')'
+  }"
+  >
+    <section class="hero-section">
+      <div class="hero-content">
+        <h2 class="hero-title">
+          Insumos médicos <br>
+          en los que puedes <br>
+          confiar
+        </h2>
+        <p class="hero-subtitle">
+          Calidad, disponibilidad y atención profesional para tu consultorio, clínica o empresa.
+        </p>
+        <div class="hero-actions">
+          <button class="btn-primary" (click)="scrollToGallery()">
+            VER PRODUCTOS
+          </button>
+          <button class="btn-secondary" (click)="requestQuote()">
+            SOLICITAR COTIZACIÓN
+          </button>
         </div>
       </div>
-    </div>
+
+      <div class="hero-image-container">
+        <img 
+          src="assets/images/hero-medical-supplies.png" 
+          alt="Insumos Médicos - Guantes, Mascarillas y Jeringas" 
+          class="hero-image"
+        >
+      </div>
+    </section>
+
+    <section class="features-bar">
+      <div class="feature-item">
+        <div class="feature-icon-wrapper green">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Productos de Calidad</strong>
+          <p>Selección de las mejores marcas en plaza.</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon-wrapper purple">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Precios y Descuentos B2B</strong>
+          <p>Precios especiales para los clientes de siempre.</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon-wrapper green">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="1" y="3" width="15" height="13"/>
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+            <circle cx="5.5" cy="18.5" r="2.5"/>
+            <circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Opciones de Entrega</strong>
+          <p>Envíos a todo el país o retiro en local.</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon-wrapper purple">
+          <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2H3z"/>
+          </svg>
+        </div>
+        <div class="feature-text">
+          <strong>Atención Personalizada</strong>
+          <p>Estamos para ayudarte en lo que necesites.</p>
+        </div>
+      </div>
+    </section>
+
+    <button class="scroll-indicator" (click)="scrollToGallery()" aria-label="Desplazarse a los productos">
+      <span>Explorar catálogo</span>
+      <svg class="arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M7 13l5 5 5-5M12 6v12"/>
+      </svg>
+    </button>
   </div>
 
   <!-- Active Filters -->
