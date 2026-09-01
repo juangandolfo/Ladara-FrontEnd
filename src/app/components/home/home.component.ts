@@ -355,6 +355,23 @@ export class HomeComponent implements OnInit, OnDestroy {
     return this.normalizeProductImage(product?.image);
   }
 
+  scrollToGallery(): void {
+    document.querySelector('.gallery')?.scrollIntoView({
+      behavior: 'smooth'
+    });
+  }
+
+  scrollToTop(): void {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+
+  requestQuote(): void {
+    return
+  }
+
   private normalizeProductImage(image?: string | null): string {
     const safeImage = image?.trim();
 
