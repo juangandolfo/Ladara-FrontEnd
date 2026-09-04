@@ -515,7 +515,7 @@
 }
 
 .cart-action-btn:hover {
-  background-color: var(--color-color-primary-lime-hover);
+  background-color: var(--color-primary-lime-hover);
 }
 
 .cart-action-btn:focus-visible {

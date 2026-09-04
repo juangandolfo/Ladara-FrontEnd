@@ -5,15 +5,19 @@
       <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
       <h1>Ladara</h1>
     </div>
+
     <div class="header-actions">
-      <button class="continue-shopping-btn" (click)="goHome()">
-        <img src="assets/images/home.svg" alt="Inicio" class="home-icon"/>
+    
+      <button class="btn btn-ghost" (click)="goHome()">
+        <span class="btn-icon home-icon"></span>
         Inicio
       </button>
-      <button class="orders-btn" (click)="goToOrders()">
-        <img src="assets/images/mis-compras.svg" alt="Mis Compras Icon" class="orders-icon">
+
+      <button class="btn btn-ghost" (click)="goToOrders()">
+        <span class="btn-icon orders-icon"></span>
         Mis Órdenes
       </button>
+
     </div>
   </header>
 
