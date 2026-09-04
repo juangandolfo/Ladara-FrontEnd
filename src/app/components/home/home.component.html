@@ -129,6 +129,48 @@
     </button>
   </div>
 
+  <!-- Search & Filter Section -->
+<div class="search-filter-section">
+  <!-- Search Bar -->
+  <div class="search-container">
+    <input 
+      type="text" 
+      class="search-input" 
+      placeholder="Buscar productos..."
+      [value]="searchTerm()"
+      (input)="searchTerm.set($any($event.target).value)"
+      aria-label="Buscar productos"
+    />
+  </div>
+
+  <!-- Category Filter Dropdown -->
+  <div class="filter-container">
+    <button class="filter-btn" (click)="toggleFilters()">
+      Filtrar por Categoría
+    </button>
+    <div class="filter-dropdown" [class.show]="isDropdownOpen()">
+      <div 
+        class="filter-option" 
+        [class.selected]="selectedCategory() === 'Todas'"
+        (click)="onCategoryFilter('Todas')">
+        Todas
+      </div>
+      <div 
+        class="filter-option" 
+        [class.selected]="selectedCategory() === 'Equipamiento'"
+        (click)="onCategoryFilter('Equipamiento')">
+        Equipamiento
+      </div>
+      <div 
+        class="filter-option" 
+        [class.selected]="selectedCategory() === 'Descartables'"
+        (click)="onCategoryFilter('Descartables')">
+        Descartables
+      </div>
+    </div>
+  </div>
+</div>
+
   <!-- Active Filters -->
   <div class="active-filters" *ngIf="(selectedCategory() && selectedCategory() !== 'Todas') || searchTerm()">
     <span *ngIf="searchTerm()" class="filter-tag">

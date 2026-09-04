@@ -34,7 +34,7 @@ interface PaginationInfo {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgOptimizedImage],
+  imports: [CommonModule, FormsModule],//, NgOptimizedImage],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
@@ -54,6 +54,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   heroOpacity = signal(1);
   heroScale = signal(1);
   heroTranslateY = signal(0);
+  isDropdownOpen = signal(false);
 
   // Private properties
   private currentOrderId: number | null = null;
@@ -166,6 +167,11 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   toggleFilters(): void {
     this.showFilters.update(show => !show);
+  }
+
+  selectCategory(category: string) {
+    this.selectedCategory.set(category);
+    this.isDropdownOpen.set(false);
   }
 
   // Pagination Methods
