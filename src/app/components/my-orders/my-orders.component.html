@@ -1,18 +1,15 @@
 <div class="orders-container">
   <!-- Header -->
-  <header class="header">
-    <div class="logo" (click)="goHome()">
+  <header class="sticky-header">
+    <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
       <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
       <h1>Ladara</h1>
     </div>
+    
     <div class="header-actions">
-      <button class="continue-shopping-btn" (click)="continueShopping()">
-        <img src="assets/images/home.svg" alt="Inicio" class="home-icon"/>
+      <button class="btn btn-ghost" (click)="goHome()">
+        <span class="btn-icon home-icon" aria-hidden="true"></span>
         Inicio
-      </button>
-      <button class="cart-btn" (click)="goToCart()">
-        <img src="assets/images/cart.svg" alt="Cart" class="cart-icon">
-        <span>Carrito</span>
       </button>
     </div>
   </header>

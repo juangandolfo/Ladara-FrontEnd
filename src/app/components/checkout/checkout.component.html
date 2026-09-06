@@ -1,16 +1,18 @@
 <div class="cart-container">
 <!-- Header -->
-<div class="header">
-  <div class="logo" (click)="goHome()">
-    <img src="assets/images/logo.png" alt="Ladara Logo" class="header-logo-img" />
-    <h1 class="brand-name">LADARA</h1>
-  </div>
-  <div class="header-actions">
-    <button type="button" class="btn btn-secondary continue-shopping-btn" (click)="goHome()">
-      <span>← Volver a la tienda</span>
-    </button>
-  </div>
-</div>
+<header class="sticky-header">
+    <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
+      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
+      <h1>Ladara</h1>
+    </div>
+    
+    <div class="header-actions">
+      <button class="btn btn-ghost" (click)="goToCart()" aria-label="Volver al carrito">
+        <span class="btn-icon cart-icon" aria-hidden="true"></span>
+        <span>Volver al carrito</span>
+      </button>
+    </div>
+  </header>
 
 
   <!-- Main Grid Content -->

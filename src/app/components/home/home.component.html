@@ -22,7 +22,7 @@
         Mis Órdenes
       </button>
 
-      <button class="btn btn-primary" (click)="goToCart()" aria-label="Ver Carrito">
+      <button class="btn btn-primary" *ngIf="isLoggedIn()" (click)="goToCart()" aria-label="Ver Carrito">
         <span class="btn-icon btn-icon-dark cart-icon" aria-hidden="true"></span>
         <span>Carrito</span>
       </button>
@@ -52,7 +52,7 @@
             VER PRODUCTOS
           </button>
           <button class="btn btn-secondary" (click)="requestQuote()">
-            SOLICITAR COTIZACIÓN
+            CONTACTANOS
           </button>
         </div>
       </div>

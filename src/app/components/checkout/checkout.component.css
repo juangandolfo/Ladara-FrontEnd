@@ -5,7 +5,7 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Header Layout & Styling */
+/* Header Layout & Styling 
 .header {
   display: flex;
   justify-content: space-between;
@@ -69,7 +69,7 @@
   background: #3d5a8a;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(74, 111, 165, 0.2);
-}
+}*/
 
 /* Stepper Header */
 .stepper {
@@ -463,7 +463,7 @@
   color: var(--color-primary-violet-hover);
 }
 
-/* Header Layout & Typography */
+/* Header Layout & Typography 
 .header {
   display: flex;
   align-items: center;
@@ -480,9 +480,9 @@
   color: var(--color-secondary-dark);
   cursor: pointer;
   margin: 0;
-}
+}*/
 
-/* Back Button System Override */
+/* Back Button System Override 
 .continue-shopping-btn.btn-secondary {
   border-color: var(--color-primary-violet);
   color: var(--color-primary-violet);
@@ -498,7 +498,7 @@
   background-color: rgba(109, 40, 217, 0.08);
   color: var(--color-primary-violet-hover);
   border-color: var(--color-primary-violet-hover);
-}
+}*/
 
 /* Fix select appearance and layout inside form-floating */
 /* Fix select background and styling inside form-floating */

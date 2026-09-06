@@ -74,6 +74,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly activeCoupon = signal<string>('DISCOUNT10'); // Managed via signal for dynamic reactivity
+  readonly isLoggedIn = signal<boolean>(true); 
 
   formData: BillingFormData = {
     firstName: '',
@@ -165,6 +166,10 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
   goHome(): void {
     this.router.navigate(['/']);
+  }
+
+  goToCart(): void {
+    this.router.navigate(['/cart']);
   }
 
   private loadCurrentOrder(): void {

@@ -1,18 +1,19 @@
+/* Container */
 .cart-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--spacing-lg);
   font-family: var(--font-body);
 }
 
-/* Header - Similar to home page */
+/* Header - Similar to home page 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
+  padding: var(--spacing-md) 0;
   border-bottom: 2px solid var(--color-secondary-light);
-  margin-bottom: 30px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .logo {
@@ -65,7 +66,7 @@
   box-shadow: 0 4px 12px var(--color-secondary-shadow);
 }
 
-/* Mis Compras Button */
+/** Mis Compras Button **/ /*
 .btn:hover {
   background: var(--color-secondary-light);
   transform: translateY(-1px);
@@ -99,7 +100,7 @@
   background-color: var(--color-primary-violet); 
   transition: transform var(--transition-fast), background-color var(--transition-fast);
   
-  /* Use the image as a mask layer */
+  /** Use the image as a mask layer **/ /*
   -webkit-mask-size: contain;
   mask-size: contain;
   -webkit-mask-repeat: no-repeat;
@@ -116,13 +117,13 @@
 .orders-icon {
     -webkit-mask-image: url('/assets/images/mis-compras.svg');
     mask-image: url('/assets/images/mis-compras.svg');
-}
+}*/
 
 .cart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .cart-header h1 {
