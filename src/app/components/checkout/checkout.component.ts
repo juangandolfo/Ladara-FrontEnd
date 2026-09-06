@@ -6,9 +6,12 @@ import { catchError } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
 import { OrderService } from '../../services/order.service';
 import { FormsModule } from '@angular/forms'; 
+import { AuthService } from '../../services/auth.service';
+import { ProductService } from '../../services/product.service';
 
 const TAX_RATE = 0.08;
 const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
+const ALL_CATEGORIES = 'Todas';
 
 export interface BillingFormData {
   firstName: string;
@@ -70,11 +73,13 @@ interface ApiResponse<T> {
   styleUrl: './checkout.component.css'
 })
 export class CheckoutComponent implements OnInit, OnDestroy {
+  /* Signals */
   readonly cartItems = signal<CartItem[]>([]);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly activeCoupon = signal<string>('DISCOUNT10'); // Managed via signal for dynamic reactivity
   readonly isLoggedIn = signal<boolean>(true); 
+  readonly categories = signal<string[]>([]);
 
   formData: BillingFormData = {
     firstName: '',
@@ -94,6 +99,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
   private orderId: number | null = null;
   private readonly destroy$ = new Subject<void>();
+
 
   // Computes layout summary dynamically from cartItems signal
   readonly orderSummary = computed((): OrderSummary => {
@@ -129,11 +135,16 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly router: Router,
-    private readonly orderService: OrderService
+    private readonly orderService: OrderService,
+    private readonly authService: AuthService,
+    private readonly productService: ProductService,
+
   ) {}
 
-  ngOnInit(): void {
-    this.loadCurrentOrder();
+  async ngOnInit(): Promise<void> {
+    // Initialize login state and listen for changes
+    this.updateLoginState();
+    this.setupAuthStateListener();
   }
 
   ngOnDestroy(): void {
@@ -169,56 +180,27 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   }
 
   goToCart(): void {
-    this.router.navigate(['/cart']);
+    this.router.navigate(['/carrito']);
   }
 
-  private loadCurrentOrder(): void {
-    this.isLoading.set(true);
-    this.error.set(null);
+  /* Private Methods */
+  /* authentication and order loading logic */
+  private setupAuthStateListener(): void {
+    // Listen for storage changes to detect login/logout from other tabs
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'token') {
+        this.updateLoginState();
+      }
+    });
 
-    this.orderService.getCurrentOrder()
-      .pipe(
-        takeUntil(this.destroy$),
-        catchError(error => {
-          this.handleError('Error cargando el pedido actual', error);
-          this.isLoading.set(false);
-          return EMPTY;
-        })
-      )
-      .subscribe({
-        next: (response) => {
-          this.processOrderResponse(response);
-          this.isLoading.set(false);
-        }
-      });
+    // Set up periodic check for auth state changes
+    setInterval(() => {
+      this.updateLoginState();
+    }, 1000);
   }
-
-  private processOrderResponse(response: ApiResponse<any[]>): void {
-    if (!response?.success || !response.data?.length) {
-      console.warn('No order found');
-      return;
-    }
-
-    const currentOrder = response.data[0];
-    this.orderId = currentOrder.id;
-
-    const mappedItems = this.mapOrderItemsToCartItems(currentOrder.items || []);
-    this.cartItems.set(mappedItems);
-  }
-
-  private mapOrderItemsToCartItems(orderItems: any[]): CartItem[] {
-    return orderItems.map(item => ({
-      id: item.id,
-      name: item.product?.name || 'Producto',
-      price: this.parsePrice(item.product?.price || 0),
-      discountedPrice: item.product?.discountedPrice ? this.parsePrice(item.product.discountedPrice) : undefined,
-      quantity: item.quantity || 1,
-      category: item.product?.category || '',
-      image: this.normalizeProductImage(item.product?.image),
-      description: item.product?.description,
-      itemId: item.id,
-      productId: item.product?.id
-    }));
+  
+  private updateLoginState(): void {
+    this.isLoggedIn.set(this.authService.isLoggedIn());
   }
 
   private normalizeProductImage(image?: string | null): string {

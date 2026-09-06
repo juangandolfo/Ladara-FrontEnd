@@ -51,6 +51,7 @@ export class CartComponent implements OnInit, OnDestroy {
   readonly cartItems = signal<CartItem[]>([]);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly isLoggedIn = signal<boolean>(true); 
 
   // Private properties
   private orderId: number | null = null;
@@ -84,9 +85,12 @@ export class CartComponent implements OnInit, OnDestroy {
     private readonly authService: AuthService
   ) {}
 
-  ngOnInit(): void {
+   async ngOnInit(): Promise<void> {
     this.loadCurrentOrder();
-  }
+    // Initialize login state and listen for changes
+    this.updateLoginState();
+    this.setupAuthStateListener();
+  } 
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -154,7 +158,7 @@ export class CartComponent implements OnInit, OnDestroy {
       this.router.navigate(['/']);
       return;
     }
-    this.router.navigate(['/my-orders']);
+    this.router.navigate(['/mis-compras']);
   }
 
   goToCheckout(): void {
@@ -165,7 +169,26 @@ export class CartComponent implements OnInit, OnDestroy {
     this.router.navigate(['/checkout']);
   }
 
-  // Private Methods
+  /* Private Methods */
+  /* authentication and order loading logic */
+  private setupAuthStateListener(): void {
+    // Listen for storage changes to detect login/logout from other tabs
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'token') {
+        this.updateLoginState();
+      }
+    });
+
+    // Set up periodic check for auth state changes
+    setInterval(() => {
+      this.updateLoginState();
+    }, 1000);
+  }
+  
+  private updateLoginState(): void {
+    this.isLoggedIn.set(this.authService.isLoggedIn());
+  }
+
   private loadCurrentOrder(): void {
     this.isLoading.set(true);
     this.error.set(null);
