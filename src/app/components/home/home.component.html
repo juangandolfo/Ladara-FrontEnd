@@ -130,7 +130,7 @@
   </div>
 
   <!-- Search & Filter Section -->
-  <div class="search-filter-section">
+  <div id="catalog" class="search-filter-section">
     <!-- Search Bar -->
     <div class="search-container">
       <input 
@@ -219,7 +219,15 @@
               aria-label="Disminuir cantidad">
               −
             </button>
-            <span class="quantity-value">{{ getProductQuantity(product.id) }}</span>
+            <input
+              class="quantity-input"
+              type="number"
+              min="1"
+              max="100"
+              [value]="getProductQuantity(product.id)"
+              (change)="onQuantityInputChange(product.id, $event)"
+              aria-label="Cantidad"
+            />
             <button
               class="quantity-btn increase"
               (click)="updateProductQuantity(product.id, getProductQuantity(product.id) + 1)"

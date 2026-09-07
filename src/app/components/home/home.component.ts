@@ -132,9 +132,14 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   scrollToGallery() {
-    const galleryElement = document.getElementById('products-grid');
+    const galleryElement = document.getElementById('catalog');
     if (galleryElement) {
-      galleryElement.scrollIntoView({ behavior: 'smooth' });
+      const headerElement = document.querySelector<HTMLElement>('.sticky-header');
+      const headerHeight = headerElement?.getBoundingClientRect().height ?? 0;
+      const galleryTop = galleryElement.getBoundingClientRect().top + window.scrollY;
+      const top = Math.max(0, galleryTop - headerHeight - 16);
+
+      window.scrollTo({ top, behavior: 'smooth' });
     }
   }
 
