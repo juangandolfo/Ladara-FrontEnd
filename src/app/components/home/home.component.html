@@ -130,46 +130,46 @@
   </div>
 
   <!-- Search & Filter Section -->
-<div class="search-filter-section">
-  <!-- Search Bar -->
-  <div class="search-container">
-    <input 
-      type="text" 
-      class="search-input" 
-      placeholder="Buscar productos..."
-      [value]="searchTerm()"
-      (input)="searchTerm.set($any($event.target).value)"
-      aria-label="Buscar productos"
-    />
-  </div>
+  <div class="search-filter-section">
+    <!-- Search Bar -->
+    <div class="search-container">
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Buscar productos..."
+        [value]="searchTerm()"
+        (input)="searchTerm.set($any($event.target).value)"
+        aria-label="Buscar productos"
+      />
+    </div>
 
-  <!-- Category Filter Dropdown -->
-  <div class="filter-container">
-    <button class="filter-btn" (click)="toggleFilters()">
-      Filtrar por Categoría
-    </button>
-    <div class="filter-dropdown" [class.show]="isDropdownOpen()">
-      <div 
-        class="filter-option" 
-        [class.selected]="selectedCategory() === 'Todas'"
-        (click)="onCategoryFilter('Todas')">
-        Todas
-      </div>
-      <div 
-        class="filter-option" 
-        [class.selected]="selectedCategory() === 'Equipamiento'"
-        (click)="onCategoryFilter('Equipamiento')">
-        Equipamiento
-      </div>
-      <div 
-        class="filter-option" 
-        [class.selected]="selectedCategory() === 'Descartables'"
-        (click)="onCategoryFilter('Descartables')">
-        Descartables
+    <!-- Category Filter Dropdown -->
+    <div class="filter-container">
+      <button class="filter-btn" (click)="toggleFilters()">
+        Filtrar por Categoría
+      </button>
+      <div class="filter-dropdown" [class.show]="isDropdownOpen()">
+        <div 
+          class="filter-option" 
+          [class.selected]="selectedCategory() === 'Todas'"
+          (click)="onCategoryFilter('Todas')">
+          Todas
+        </div>
+        <div 
+          class="filter-option" 
+          [class.selected]="selectedCategory() === 'Equipamiento'"
+          (click)="onCategoryFilter('Equipamiento')">
+          Equipamiento
+        </div>
+        <div 
+          class="filter-option" 
+          [class.selected]="selectedCategory() === 'Descartables'"
+          (click)="onCategoryFilter('Descartables')">
+          Descartables
+        </div>
       </div>
     </div>
   </div>
-</div>
 
   <!-- Active Filters -->
   <div class="active-filters" *ngIf="(selectedCategory() && selectedCategory() !== 'Todas') || searchTerm()">
@@ -187,58 +187,40 @@
   <!-- Products Grid -->
   <div class="products-grid">
     <div class="product-card" *ngFor="let product of products()">
-      <!-- Top Tags & Wishlist Row -->
-      <div class="card-header-actions">
-        <span class="offer-tag" *ngIf="product.discountedPrice < product.price">OFERTA</span>
-        <button class="wishlist-btn" aria-label="Añadir a favoritos">
-          <svg class="heart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      <!-- Top Product Image & Wishlist Button -->
+      <div class="product-image-container">
+        <img [src]="product.image || 'assets/logo.png'" [alt]="product.name" class="product-image" />
+        <button class="wishlist-btn" aria-label="Añadir a la lista de deseos">
+          <svg class="heart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.78-8.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
         </button>
       </div>
 
-      <!-- Product Image -->
-      <div class="product-image">
-        <img
-          [src]="getProductImage(product)"
-          [alt]="product.name"
-          (error)="product.image = '/vacuna.jpg'"
-        >
-      </div>
-
-      <!-- Product Content -->
+      <!-- Card Body Content -->
       <div class="product-info">
-        <h3 class="product-name">{{ product.name }}</h3>
-        <p class="sku-text" *ngIf="product.sku">SKU: {{ product.sku }}</p>
-
-        <!-- Rating Row -->
-        <div class="rating-row" aria-label="Calificación 5 de 5 estrellas (24 opiniones)">
-          <div class="stars" aria-hidden="true">
-            ★★★★★
-          </div>
-          <span class="rating-count">(24)</span>
+        <!-- Title & Discount Badge Row -->
+        <div class="title-row">
+          <h3 class="product-name">{{ product.name }}</h3>
+          <span class="discount-badge" *ngIf="product.discountedPrice < product.price"> 
+            {{ getDiscountPercentage(product.price, product.discountedPrice) }}% OFF
+          </span>
         </div>
 
-        <!-- Price & Discount Row -->
-        <div class="price-row">
+        <!-- Category / SKU -->
+        <p class="sku-text"> {{ product.category }}</p>
+
+        <!-- Price & Stock Row -->
+        <div class="price-stock-row">
           <div class="price-wrapper">
             <span class="discounted-price">${{ product.discountedPrice }}</span>
             <span class="original-price" *ngIf="product.discountedPrice < product.price">
               ${{ product.price }}
             </span>
           </div>
-          <span class="discount-pill" *ngIf="product.discountedPrice < product.price">
-            {{ getDiscountPercentage(product.price, product.discountedPrice) }}% OFF
-          </span>
         </div>
 
-        <!-- Stock Status Indicator -->
-        <div class="stock-status">
-          <span class="status-dot"></span>
-          <span class="status-text">En stock</span>
-        </div>
-
-        <!-- Actions Row: Quantity Selector + Cart Icon Button -->
+        <!-- Actions Row: Quantity Selector + Add to Cart Button -->
         <div class="card-actions-row">
           <div class="quantity-controls">
             <button
@@ -248,15 +230,7 @@
               aria-label="Disminuir cantidad">
               −
             </button>
-            <input
-              type="number"
-              class="quantity-input"
-              [value]="getProductQuantity(product.id)"
-              (blur)="onQuantityInputChange(product.id, $event)"
-              (keydown.enter)="onQuantityInputChange(product.id, $event)"
-              min="1"
-              max="100"
-              aria-label="Cantidad del producto">
+            <span class="quantity-value">{{ getProductQuantity(product.id) }}</span>
             <button
               class="quantity-btn increase"
               (click)="updateProductQuantity(product.id, getProductQuantity(product.id) + 1)"
@@ -269,9 +243,7 @@
             class="cart-action-btn" 
             (click)="addToCart(product.id, getProductQuantity(product.id))"
             aria-label="Añadir al carrito">
-            <svg class="cart-btn-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
+            AÑADIR AL CARRITO
           </button>
         </div>
       </div>
