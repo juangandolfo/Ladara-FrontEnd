@@ -42,7 +42,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Signals
   readonly searchTerm = signal('');
   readonly selectedCategory = signal('');
-  readonly showFilters = signal(false);
   readonly currentPage = signal(1);
   readonly itemsPerPage = signal(DEFAULT_ITEMS_PER_PAGE);
   readonly totalCount = signal(0);
@@ -149,29 +148,33 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Search and Filter Methods
   onSearch(event: Event): void {
     const target = event.target as HTMLInputElement;
-    this.searchSubject.next(target.value);
+    this.searchSubject.next(target.value.trim());
   }
 
   onCategoryFilter(category: string): void {
     this.selectedCategory.set(category);
-    this.showFilters.set(false);
+    this.isDropdownOpen.set(false);
+    this.resetToFirstPage();
+  }
+
+  clearSearchFilter(): void {
+    this.searchSubject.next('');
+  }
+
+  clearCategoryFilter(): void {
+    this.selectedCategory.set('');
     this.resetToFirstPage();
   }
 
   clearFilters(): void {
     this.selectedCategory.set('');
-    this.searchTerm.set('');
-    this.showFilters.set(false);
+    this.searchSubject.next('');
+    this.isDropdownOpen.set(false);
     this.resetToFirstPage();
   }
 
   toggleFilters(): void {
-    this.showFilters.update(show => !show);
-  }
-
-  selectCategory(category: string) {
-    this.selectedCategory.set(category);
-    this.isDropdownOpen.set(false);
+    this.isDropdownOpen.update(isOpen => !isOpen);
   }
 
   // Pagination Methods

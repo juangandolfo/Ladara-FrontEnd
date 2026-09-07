@@ -138,7 +138,7 @@
         class="search-input" 
         placeholder="Buscar productos..."
         [value]="searchTerm()"
-        (input)="searchTerm.set($any($event.target).value)"
+        (input)="onSearch($event)"
         aria-label="Buscar productos"
       />
     </div>
@@ -149,23 +149,12 @@
         Filtrar por Categoría
       </button>
       <div class="filter-dropdown" [class.show]="isDropdownOpen()">
-        <div 
+        <div
+          *ngFor="let category of categories()"
           class="filter-option" 
-          [class.selected]="selectedCategory() === 'Todas'"
-          (click)="onCategoryFilter('Todas')">
-          Todas
-        </div>
-        <div 
-          class="filter-option" 
-          [class.selected]="selectedCategory() === 'Equipamiento'"
-          (click)="onCategoryFilter('Equipamiento')">
-          Equipamiento
-        </div>
-        <div 
-          class="filter-option" 
-          [class.selected]="selectedCategory() === 'Descartables'"
-          (click)="onCategoryFilter('Descartables')">
-          Descartables
+          [class.selected]="selectedCategory() === category"
+          (click)="onCategoryFilter(category)">
+          {{ category }}
         </div>
       </div>
     </div>
@@ -175,11 +164,11 @@
   <div class="active-filters" *ngIf="(selectedCategory() && selectedCategory() !== 'Todas') || searchTerm()">
     <span *ngIf="searchTerm()" class="filter-tag">
       Search: "{{ searchTerm() }}"
-      <button (click)="searchTerm.set('')" aria-label="Eliminar filtro de búsqueda">×</button>
+      <button (click)="clearSearchFilter()" aria-label="Eliminar filtro de búsqueda">×</button>
     </span>
     <span *ngIf="selectedCategory() && selectedCategory() !== 'Todas'" class="filter-tag">
       Tipo: {{ selectedCategory() }}
-      <button (click)="selectedCategory.set('')" aria-label="Eliminar filtro de categoría">×</button>
+      <button (click)="clearCategoryFilter()" aria-label="Eliminar filtro de categoría">×</button>
     </span>
     <button class="clear-all" (click)="clearFilters()">Limpiar filtros</button>
   </div>
