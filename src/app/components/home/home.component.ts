@@ -163,7 +163,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   clearSearchFilter(): void {
+    this.searchTerm.set('');
     this.searchSubject.next('');
+    this.resetToFirstPage();
   }
 
   clearCategoryFilter(): void {
@@ -173,6 +175,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   clearFilters(): void {
     this.selectedCategory.set('');
+    this.searchTerm.set('');
     this.searchSubject.next('');
     this.isDropdownOpen.set(false);
     this.resetToFirstPage();

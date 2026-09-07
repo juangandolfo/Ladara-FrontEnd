@@ -1,0 +1,34 @@
+<div class="home-container">
+  <header class="sticky-header">
+    <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
+      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
+      <h1>Ladara</h1>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-secondary" *ngIf="!isLoggedIn()" type="button" (click)="login()">
+        <span class="btn-icon login-icon" aria-hidden="true"></span>
+        Inicia sesión
+      </button>
+
+      <button class="btn btn-ghost" *ngIf="isLoggedIn()" type="button" (click)="logout()">
+        <span class="btn-icon logout-icon" aria-hidden="true"></span>
+        Cerrar sesión
+      </button>
+
+      <button class="btn btn-ghost" *ngIf="isLoggedIn()" type="button" (click)="goToOrders()">
+        <span class="btn-icon orders-icon" aria-hidden="true"></span>
+        Mis Órdenes
+      </button>
+
+      <button class="btn btn-primary" *ngIf="isLoggedIn()" type="button" (click)="goToCart()" aria-label="Ver Carrito">
+        <span class="btn-icon btn-icon-dark cart-icon" aria-hidden="true"></span>
+        <span>Carrito</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="dashboard-content">
+    <h2 class="dashboard-title">DASHBOARD</h2>
+  </div>
+</div>
