@@ -5,6 +5,7 @@ import { Subject, takeUntil, forkJoin, EMPTY, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
+import { DialogService } from '../../services/dialog.service';
 
 // Constants
 const TAX_RATE = 0.08;
@@ -89,7 +90,8 @@ export class CartComponent implements OnInit, OnDestroy {
   constructor(
     private readonly router: Router,
     private readonly orderService: OrderService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly dialogService: DialogService
   ) {}
 
    async ngOnInit(): Promise<void> {
@@ -155,10 +157,14 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   onCouponClick(): void {
-    const code = prompt('Ingresa tu código de cupón:');
-    if (code) {
-      this.activeCoupon.set(code.trim());
-    }
+    this.dialogService.prompt(
+      'Ingresa tu código de cupón:',
+      'Cupón de descuento'
+    ).then(code => {
+      if (code) {
+        this.activeCoupon.set(code.trim());
+      }
+    });
   }
 
   onRemoveCoupon(): void {
@@ -176,7 +182,11 @@ export class CartComponent implements OnInit, OnDestroy {
 
   goToOrders(): void {
     if (!this.authService.isLoggedIn()) {
-      alert('Por favor inicia sesión para ver tus órdenes');
+      this.dialogService.alert(
+        'Por favor inicia sesión para ver tus órdenes',
+        'Inicio de sesión requerido',
+        'warning'
+      );
       this.router.navigate(['/']);
       return;
     }

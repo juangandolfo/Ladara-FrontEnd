@@ -7,7 +7,7 @@ import { Product } from '../../services/models/product.models';
 import { ProductService } from '../../services/product.service';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
-import Swal from 'sweetalert2';
+import { DialogService } from '../../services/dialog.service';
 
 // Constants
 const DEFAULT_ITEMS_PER_PAGE = 8;
@@ -59,6 +59,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private currentOrderId: number | null = null;
   private readonly destroy$ = new Subject<void>();
   private readonly searchSubject = new Subject<string>();
+  private authStateIntervalId: ReturnType<typeof setInterval> | null = null;
 
   // Computed properties
   readonly totalPages = computed(() =>
@@ -84,7 +85,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly productService: ProductService,
     private readonly orderService: OrderService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly dialogService: DialogService
   ) {
     this.setupSearchDebounce();
   }
@@ -109,6 +111,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.authStateIntervalId) {
+      clearInterval(this.authStateIntervalId);
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -215,17 +220,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   goToCart(): void {
     // Check if user is logged in before accessing cart
     if (!this.isLoggedIn()) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Inicio de sesión requerido',
-        text: 'Debes iniciar sesión para acceder al carrito',
-        showCancelButton: true,
-        confirmButtonText: 'Iniciar sesión',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#4a6fa5',
-        cancelButtonColor: '#6c7b95'
-      }).then((result) => {
-        if (result.isConfirmed) {
+      this.dialogService.confirm(
+        'Debes iniciar sesión para continuar.',
+        'Inicio de sesión requerido'
+      ).then(confirmed => {
+        if (confirmed) {
           this.login();
         }
       });
@@ -250,15 +249,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     // Note: This might need to be moved to a callback after actual login success
     setTimeout(() => {
       if (this.isLoggedIn()) {
-        Swal.fire({
-          icon: 'success',
-          title: '¡Inicio de sesión exitoso!',
-          text: 'Has iniciado sesión correctamente',
-          timer: 2000,
-          showConfirmButton: false,
-          toast: true,
-          position: 'top-end'
-        });
+        this.dialogService.alert(
+          'Has iniciado sesión correctamente',
+          '¡Inicio de sesión exitoso!',
+          'success',
+          2000
+        );
       }
     }, 1000);
   }
@@ -268,15 +264,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.updateLoginState();
 
     // Show logout success message
-    Swal.fire({
-      icon: 'success',
-      title: '¡Sesión cerrada!',
-      text: 'Has cerrado sesión exitosamente',
-      timer: 2000,
-      showConfirmButton: false,
-      toast: true,
-      position: 'top-end'
-    });
+    this.dialogService.alert(
+      'Has cerrado sesión exitosamente',
+      '¡Sesión cerrada!',
+      'success',
+      2000
+    );
 
     this.router.navigate(['/']).then();
   }
@@ -285,17 +278,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   addToCart(productId: number, quantity: number = 1): void {
     // Check if user is logged in before adding to cart
     if (!this.isLoggedIn()) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Inicio de sesión requerido',
-        text: 'Debes iniciar sesión para añadir productos al carrito',
-        showCancelButton: true,
-        confirmButtonText: 'Iniciar sesión',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#4a6fa5',
-        cancelButtonColor: '#6c7b95'
-      }).then((result) => {
-        if (result.isConfirmed) {
+      this.dialogService.confirm(
+        'Debes iniciar sesión para continuar.',
+        'Inicio de sesión requerido'
+      ).then(confirmed => {
+        if (confirmed) {
           this.login();
         }
       });
@@ -304,13 +291,11 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     // Check if quantity exceeds maximum
     if (quantity > 100) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Cantidad máxima excedida',
-        text: 'No puedes añadir más de 100 productos al carrito',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#4a6fa5'
-      });
+      this.dialogService.alert(
+        'No puedes añadir más de 100 productos al carrito',
+        'Cantidad máxima excedida',
+        'warning'
+      );
       return;
     }
 
@@ -328,15 +313,12 @@ export class HomeComponent implements OnInit, OnDestroy {
             this.updateProductQuantity(productId, 1);
 
             // Show success message
-            Swal.fire({
-              icon: 'success',
-              title: '¡Producto añadido!',
-              text: 'El producto se ha añadido al carrito exitosamente',
-              timer: 2000,
-              showConfirmButton: false,
-              toast: true,
-              position: 'top-end'
-            });
+            this.dialogService.alert(
+              'El producto se ha añadido al carrito exitosamente',
+              '¡Producto añadido!',
+              'success',
+              2000
+            );
           } else {
             console.error('Failed to add item:', response.message);
           }
@@ -353,13 +335,11 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     // Show alert if trying to exceed maximum
     if (quantity > maxQuantity) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Cantidad máxima excedida',
-        text: 'No puedes seleccionar más de 100 productos',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#4a6fa5'
-      });
+      this.dialogService.alert(
+        'No puedes seleccionar más de 100 productos',
+        'Cantidad máxima excedida',
+        'warning'
+      );
       return;
     }
 
@@ -384,13 +364,11 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.updateProductQuantity(productId, value);
     } else if (value > 100) {
       // Show alert and reset to max value
-      Swal.fire({
-        icon: 'warning',
-        title: 'Cantidad máxima excedida',
-        text: 'No puedes seleccionar más de 100 productos',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#4a6fa5'
-      });
+      this.dialogService.alert(
+        'No puedes seleccionar más de 100 productos',
+        'Cantidad máxima excedida',
+        'warning'
+      );
       target.value = '100';
       this.updateProductQuantity(productId, 100);
     } else {
@@ -448,18 +426,33 @@ export class HomeComponent implements OnInit, OnDestroy {
     // Listen for storage changes to detect login/logout from other tabs
     window.addEventListener('storage', (event) => {
       if (event.key === 'token') {
-        this.updateLoginState();
+        this.handleAuthStateChange();
       }
     });
 
     // Set up periodic check for auth state changes
-    setInterval(() => {
-      this.updateLoginState();
+    this.authStateIntervalId = setInterval(() => {
+      this.handleAuthStateChange();
     }, 1000);
   }
 
   private updateLoginState(): void {
     this.isLoggedIn.set(this.authService.isLoggedIn());
+  }
+
+  private handleAuthStateChange(): void {
+    const wasLoggedIn = this.isLoggedIn();
+    const isLoggedIn = this.authService.isLoggedIn();
+    this.isLoggedIn.set(isLoggedIn);
+
+    if (!isLoggedIn) {
+      this.currentOrderId = null;
+      return;
+    }
+
+    if (!wasLoggedIn && isLoggedIn) {
+      void this.initializeCurrentOrder();
+    }
   }
 
   private async initializeCurrentOrder(): Promise<void> {

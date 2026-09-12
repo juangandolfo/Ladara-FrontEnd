@@ -1,0 +1,124 @@
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  background: rgba(31, 41, 55, 0.5);
+}
+
+.dialog {
+  position: relative;
+  width: min(100%, 450px);
+  padding: var(--spacing-xl);
+  border-top: 6px solid var(--color-primary-violet);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  font-family: var(--font-body);
+}
+
+.dialog-success {
+  border-top-color: var(--color-success);
+}
+
+.dialog-warning,
+.dialog-error {
+  border-top-color: var(--color-error);
+}
+
+.dialog-close {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-secondary-dark);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dialog-close:hover {
+  background: var(--color-secondary-light);
+}
+
+.dialog-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--spacing-md);
+  place-items: center;
+  border: 2px solid var(--color-primary-violet);
+  border-radius: 50%;
+  color: var(--color-primary-violet);
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.dialog-success .dialog-icon {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.dialog-warning .dialog-icon,
+.dialog-error .dialog-icon {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.dialog h2 {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--color-secondary-dark);
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+}
+
+.dialog p {
+  margin: 0;
+  color: var(--color-secondary-dark);
+}
+
+.dialog-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-secondary-border);
+  border-radius: var(--radius-md);
+  font: inherit;
+}
+
+.dialog-input:focus {
+  outline: none;
+  border-color: var(--color-primary-violet);
+  box-shadow: 0 0 0 3px var(--color-primary-violet-shadow);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xl);
+}
+
+@media (max-width: 480px) {
+  .dialog {
+    padding: var(--spacing-lg);
+  }
+
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-actions .btn {
+    width: 100%;
+  }
+}

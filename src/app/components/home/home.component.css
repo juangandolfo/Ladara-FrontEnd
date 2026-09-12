@@ -1062,14 +1062,6 @@
   color: white;
 }
 
-.swal-title-custom {
-  font-family: var(--font-heading) !important;
-}
-
-.swal-text-custom {
-  font-family: var(--font-body) !important;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
   .home-container {

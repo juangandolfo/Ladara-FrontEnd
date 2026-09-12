@@ -1,0 +1,51 @@
+<ng-container *ngIf="dialogService.dialog() as dialog">
+  <div
+    class="dialog-backdrop"
+    (click)="closeOnBackdrop($event)"
+    role="presentation"
+  >
+    <section
+      class="dialog"
+      [class]="'dialog-' + dialog.tone"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="app-dialog-title"
+      aria-describedby="app-dialog-message"
+    >
+      <button class="dialog-close" type="button" (click)="cancel()" aria-label="Cerrar">
+        &times;
+      </button>
+      <div class="dialog-icon" aria-hidden="true">
+        <span *ngIf="dialog.tone === 'success'">&#10003;</span>
+        <span *ngIf="dialog.tone === 'warning'">!</span>
+        <span *ngIf="dialog.tone === 'error'">&times;</span>
+        <span *ngIf="dialog.tone === 'info'">i</span>
+      </div>
+      <h2 id="app-dialog-title">{{ dialog.title }}</h2>
+      <p id="app-dialog-message">{{ dialog.message }}</p>
+      <input
+        *ngIf="dialog.mode === 'prompt'"
+        #dialogInput
+        class="dialog-input"
+        type="text"
+        [value]="dialog.defaultValue"
+        [placeholder]="dialog.placeholder"
+        (input)="promptValue = $any($event.target).value"
+        (keydown.enter)="confirm()"
+      />
+      <div class="dialog-actions">
+        <button
+          *ngIf="dialog.mode !== 'alert'"
+          class="btn btn-ghost"
+          type="button"
+          (click)="cancel()"
+        >
+          {{ dialog.cancelText }}
+        </button>
+        <button class="btn btn-primary" type="button" (click)="confirm()">
+          {{ dialog.confirmText }}
+        </button>
+      </div>
+    </section>
+  </div>
+</ng-container>

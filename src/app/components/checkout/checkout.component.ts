@@ -8,6 +8,7 @@ import { OrderService } from '../../services/order.service';
 import { FormsModule } from '@angular/forms'; 
 import { AuthService } from '../../services/auth.service';
 import { ProductService } from '../../services/product.service';
+import { DialogService } from '../../services/dialog.service';
 
 const TAX_RATE = 0.08;
 const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
@@ -138,6 +139,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     private readonly orderService: OrderService,
     private readonly authService: AuthService,
     private readonly productService: ProductService,
+    private readonly dialogService: DialogService,
 
   ) {}
 
@@ -153,10 +155,14 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   }
 
   onCouponClick(): void {
-    const code = prompt('Ingresa tu código de cupón:');
-    if (code) {
-      this.activeCoupon.set(code.trim());
-    }
+    this.dialogService.prompt(
+      'Ingresa tu código de cupón:',
+      'Cupón de descuento'
+    ).then(code => {
+      if (code) {
+        this.activeCoupon.set(code.trim());
+      }
+    });
   }
 
   onRemoveCoupon(): void {
@@ -165,10 +171,14 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
   onPlaceOrder(): void {
     if (!this.orderSummary().items.length) {
-      alert('Tu carrito está vacío.');
+      this.dialogService.alert('Tu carrito está vacío.', 'Carrito vacío', 'warning');
       return;
     }
-    alert(`Pedido realizado con éxito por un total de $${this.orderSummary().total.toFixed(2)}`);
+    this.dialogService.alert(
+      `Pedido realizado con éxito por un total de $${this.orderSummary().total.toFixed(2)}`,
+      'Pedido realizado',
+      'success'
+    );
   }
 
   validateCouponCode(code: string): boolean {

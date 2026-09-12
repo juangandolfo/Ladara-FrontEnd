@@ -3,6 +3,11 @@ import { fakeAsync, tick } from '@angular/core/testing';
 import { HomeComponent } from './home.component';
 
 describe('HomeComponent', () => {
+  const dialogService = {
+    confirm: jasmine.createSpy('confirm').and.returnValue(Promise.resolve(false)),
+    alert: jasmine.createSpy('alert').and.returnValue(Promise.resolve(true))
+  };
+
   function createComponent(): HomeComponent {
     return new HomeComponent(
       { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
@@ -21,7 +26,8 @@ describe('HomeComponent', () => {
         isLoggedIn: () => false,
         loginWithGoogle: jasmine.createSpy('loginWithGoogle'),
         logout: jasmine.createSpy('logout')
-      } as any
+      } as any,
+      dialogService as any
     );
   }
 
@@ -58,6 +64,17 @@ describe('HomeComponent', () => {
 
     component.toggleFilters();
     expect(component.isDropdownOpen()).toBeFalse();
+  });
+
+  it('opens the login confirmation when a logged-out user opens the cart', () => {
+    const component = createComponent();
+
+    component.goToCart();
+
+    expect(dialogService.confirm).toHaveBeenCalledWith(
+      'Debes iniciar sesión para continuar.',
+      'Inicio de sesión requerido'
+    );
   });
 
   it('should apply the selected category and refetch from the first page', () => {
@@ -102,5 +119,30 @@ describe('HomeComponent', () => {
     expect(component.getProductImage({ image: 'products/mask.jpg' } as any)).toBe('/products/mask.jpg');
     expect(component.getProductImage({ image: 'https://cdn.example/mask.jpg' } as any)).toBe('https://cdn.example/mask.jpg');
     expect(component.getDiscountPercentage(100, 75)).toBe(25);
+  });
+
+  it('reloads the current order when a user logs in after logout', () => {
+    let loggedIn = false;
+    const currentOrder = jasmine.createSpy('getCurrentOrder').and.returnValue(
+      of({ data: [{ id: 42 }] })
+    );
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { filterProductsQuery: jasmine.createSpy().and.returnValue(of({ data: [], meta: { total: 0 } })) } as any,
+      { getCurrentOrder: currentOrder } as any,
+      {
+        isLoggedIn: () => loggedIn,
+        loginWithGoogle: jasmine.createSpy('loginWithGoogle'),
+        logout: jasmine.createSpy('logout')
+      } as any,
+      dialogService as any
+    );
+
+    component['handleAuthStateChange']();
+    loggedIn = true;
+    component['handleAuthStateChange']();
+
+    expect(currentOrder).toHaveBeenCalled();
+    expect(component['currentOrderId']).toBe(42);
   });
 });
