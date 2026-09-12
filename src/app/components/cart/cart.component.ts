@@ -29,6 +29,8 @@ interface CartSummary {
   subtotal: number;
   totalItems: number;
   totalSavings: number;
+  couponCode: string;
+  discount: number;
   tax: number;
   total: number;
 }
@@ -52,6 +54,7 @@ export class CartComponent implements OnInit, OnDestroy {
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly isLoggedIn = signal<boolean>(true); 
+  readonly activeCoupon = signal('');
 
   // Private properties
   private orderId: number | null = null;
@@ -64,15 +67,19 @@ export class CartComponent implements OnInit, OnDestroy {
     const subtotal = this.calculateSubtotal(items);
     const totalItems = this.calculateTotalItems(items);
     const totalSavings = this.calculateTotalSavings(items);
-    const tax = subtotal * TAX_RATE;
-    const total = subtotal + tax;
+    const couponCode = this.activeCoupon();
+    const discount = this.validateCouponCode(couponCode) ? subtotal * 0.1 : 0;
+    const taxableAmount = Math.max(0, subtotal - discount);
+    const tax = taxableAmount * TAX_RATE;
+    const total = taxableAmount + tax;
 
-    return { subtotal, totalItems, totalSavings, tax, total };
+    return { subtotal, totalItems, totalSavings, couponCode, discount, tax, total };
   });
 
   readonly subtotal = computed(() => this.cartSummary().subtotal);
   readonly totalItems = computed(() => this.cartSummary().totalItems);
   readonly totalSavings = computed(() => this.cartSummary().totalSavings);
+  readonly couponDiscount = computed(() => this.cartSummary().discount);
   readonly tax = computed(() => this.cartSummary().tax);
   readonly total = computed(() => this.cartSummary().total);
 
@@ -145,6 +152,21 @@ export class CartComponent implements OnInit, OnDestroy {
 
     const deleteOperations = this.createBulkDeleteOperations(items);
     this.performBulkDelete(deleteOperations);
+  }
+
+  onCouponClick(): void {
+    const code = prompt('Ingresa tu código de cupón:');
+    if (code) {
+      this.activeCoupon.set(code.trim());
+    }
+  }
+
+  onRemoveCoupon(): void {
+    this.activeCoupon.set('');
+  }
+
+  validateCouponCode(code: string): boolean {
+    return code === 'DISCOUNT10';
   }
 
   // Navigation Methods

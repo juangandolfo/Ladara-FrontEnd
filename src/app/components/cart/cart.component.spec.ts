@@ -2,6 +2,28 @@ import { of } from 'rxjs';
 import { CartComponent } from './cart.component';
 
 describe('CartComponent', () => {
+  it('applies and removes the checkout coupon in the cart summary', () => {
+    const component = new CartComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { getCurrentOrder: () => ({ subscribe: () => undefined }) } as any,
+      { isLoggedIn: () => true } as any
+    );
+
+    component['cartItems'].set([
+      { id: 1, name: 'Soap', price: 100, quantity: 1, category: 'Health' }
+    ]);
+    component.activeCoupon.set('DISCOUNT10');
+
+    expect(component.couponDiscount()).toBe(10);
+    expect(component.tax()).toBe(7.2);
+    expect(component.total()).toBe(97.2);
+
+    component.onRemoveCoupon();
+
+    expect(component.couponDiscount()).toBe(0);
+    expect(component.total()).toBe(108);
+  });
+
   it('should keep separate cart rows when multiple order items share the same product id', () => {
     const component = new CartComponent(
       { navigate: jasmine.createSpy('navigate') } as any,

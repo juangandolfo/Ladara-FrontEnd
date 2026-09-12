@@ -1,6 +1,6 @@
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { AdminDashboardGuard, AdminHomeRedirectGuard } from './auth.guard';
+import { AdminDashboardGuard, AdminHomeRedirectGuard, AuthGuard } from './auth.guard';
 
 describe('Admin guards', () => {
   let router: { navigate: jasmine.Spy };
@@ -90,5 +90,21 @@ describe('Admin guards', () => {
       expect(router.navigate).toHaveBeenCalledWith(['/']);
       done();
     });
+  });
+
+  it('allows authenticated users through protected routes', () => {
+    const authService = { isLoggedIn: () => true } as Partial<AuthService> as AuthService;
+    const guard = new AuthGuard(authService, router as any);
+
+    expect(guard.canActivate()).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('redirects unauthenticated users from protected routes', () => {
+    const authService = { isLoggedIn: () => false } as Partial<AuthService> as AuthService;
+    const guard = new AuthGuard(authService, router as any);
+
+    expect(guard.canActivate()).toBeFalse();
+    expect(router.navigate).toHaveBeenCalledWith(['/']);
   });
 });

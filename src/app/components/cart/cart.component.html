@@ -120,6 +120,11 @@
           <span class="savings-amount">-${{ totalSavings().toFixed(2) }}</span>
         </div>
 
+        <div class="summary-row coupon-row" *ngIf="couponDiscount() > 0">
+          <span>Cupón: {{ cartSummary().couponCode }}</span>
+          <span class="coupon-val">-${{ couponDiscount().toFixed(2) }} <a href="javascript:void(0)" (click)="onRemoveCoupon()">(Quitar)</a></span>
+        </div>
+
         <div class="summary-row">
           <span>Impuestos</span>
           <span>${{ tax().toFixed(2) }}</span>
@@ -139,6 +144,9 @@
           <button class="continue-shopping-link" (click)="goHome()">
             Seguir comprando
           </button>
+          <p class="coupon-action-text">
+            ¿Tienes un cupón? <a href="javascript:void(0)" (click)="onCouponClick()">Ingresa tu código aquí</a>
+          </p>
         </div>
       </div>
     </div>

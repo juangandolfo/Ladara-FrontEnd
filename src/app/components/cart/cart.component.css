@@ -431,6 +431,16 @@
   font-weight: 700;
 }
 
+.coupon-row .coupon-val {
+  color: var(--color-error);
+}
+
+.coupon-row a {
+  color: var(--color-error);
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
 .summary-row.total {
   font-size: 1.2rem;
   font-weight: 700;
@@ -446,6 +456,19 @@
 
 .checkout-actions {
   margin-top: 30px;
+}
+
+.coupon-action-text {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-secondary-dark);
+  margin: 28px 0 0;
+}
+
+.coupon-action-text a {
+  color: var(--color-primary-violet);
+  font-weight: 500;
+  text-decoration: underline;
 }
 
 .checkout-btn {

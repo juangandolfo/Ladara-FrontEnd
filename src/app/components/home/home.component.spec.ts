@@ -72,4 +72,35 @@ describe('HomeComponent', () => {
     expect(component.isDropdownOpen()).toBeFalse();
     expect(fetchSpy).toHaveBeenCalled();
   });
+
+  it('calculates pagination information and visible pages', () => {
+    const component = createComponent();
+    component.itemsPerPage.set(8);
+    component.totalCount.set(100);
+    component.currentPage.set(5);
+
+    expect(component.totalPages()).toBe(13);
+    expect(component.paginationInfo()).toEqual({ startItem: 33, endItem: 40, total: 100 });
+    expect(component.visiblePages()).toEqual([1, '...', 3, 4, 5, 6, 7, '...', 13]);
+  });
+
+  it('clamps product quantities and handles invalid input', () => {
+    const component = createComponent();
+    component.updateProductQuantity(4, 0);
+    expect(component.getProductQuantity(4)).toBe(1);
+    component.updateProductQuantity(4, 100);
+    expect(component.getProductQuantity(4)).toBe(100);
+
+    const input = { value: 'not-a-number' } as HTMLInputElement;
+    component.onQuantityInputChange(4, { target: input } as any);
+    expect(input.value).toBe('100');
+  });
+
+  it('normalizes product images and calculates discounts', () => {
+    const component = createComponent();
+    expect(component.getProductImage(undefined)).toBe('/vacuna.jpg');
+    expect(component.getProductImage({ image: 'products/mask.jpg' } as any)).toBe('/products/mask.jpg');
+    expect(component.getProductImage({ image: 'https://cdn.example/mask.jpg' } as any)).toBe('https://cdn.example/mask.jpg');
+    expect(component.getDiscountPercentage(100, 75)).toBe(25);
+  });
 });
