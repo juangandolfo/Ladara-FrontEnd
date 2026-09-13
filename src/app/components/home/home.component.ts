@@ -2,7 +2,7 @@ import { Component, computed, OnInit, signal, OnDestroy, HostListener } from '@a
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { Product } from '../../services/models/product.models';
 import { ProductService } from '../../services/product.service';
 import { OrderService } from '../../services/order.service';
@@ -298,12 +298,27 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.currentOrderId) {
-      console.error('No current order available');
-      return;
-    }
+    this.addItemToCurrentOrder(productId, quantity);
+  }
 
-    this.orderService.addItemToOrder(this.currentOrderId, productId, quantity)
+  private addItemToCurrentOrder(productId: number, quantity: number): void {
+    const addItem = (orderId: number) => this.orderService.addItemToOrder(orderId, productId, quantity);
+    const request = this.currentOrderId
+      ? addItem(this.currentOrderId)
+      : this.orderService.getCurrentOrder().pipe(
+          takeUntil(this.destroy$),
+          switchMap(response => {
+            const currentOrder = response?.data?.[0];
+            const orderId = Number(currentOrder?.id);
+            if (!Number.isInteger(orderId) || orderId < 1) {
+              throw new Error('No active cart was returned by the backend');
+            }
+            this.currentOrderId = orderId;
+            return addItem(orderId);
+          })
+        );
+
+    request
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -324,6 +339,11 @@ export class HomeComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error adding item:', error);
+          this.dialogService.alert(
+            'No se pudo añadir el producto al carrito. Intenta nuevamente.',
+            'Error al añadir producto',
+            'warning'
+          );
         }
       });
   }

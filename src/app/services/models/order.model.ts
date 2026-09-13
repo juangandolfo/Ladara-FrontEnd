@@ -23,6 +23,7 @@ export interface OrderDto {
   userId: number;
   status: string;
   total: number;
+  shippingCost: number;
   createdAt: string;
   updatedAt: string;
   items?: OrderItemDto[];

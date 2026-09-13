@@ -28,6 +28,15 @@ describe('OrderService', () => {
     request.flush({ success: true });
   });
 
+  it('updates an item quantity through the item endpoint', () => {
+    service.updateItemQuantity(22, 2).subscribe();
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/items/22');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ quantity: 2 });
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({ success: true });
+  });
+
   it('deletes an item and loads current and all orders', () => {
     service.deleteItemFromOrder(22).subscribe();
     service.getCurrentOrder().subscribe();

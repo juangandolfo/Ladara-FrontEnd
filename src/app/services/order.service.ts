@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
-import {Observable} from 'rxjs';
+import {Observable, retry, throwError, timer} from 'rxjs';
 
 export interface AddItemToOrderDto {
   productId: number;
@@ -11,6 +11,10 @@ export interface AddItemResponse {
   success: boolean;
   item?: any;
   message?: string;
+}
+
+export interface UpdateItemQuantityDto {
+  quantity: number;
 }
 
 export interface DeleteItemResponse {
@@ -39,13 +43,20 @@ export class OrderService {
     const addItemDto: AddItemToOrderDto = {productId, quantity};
     return this.http.post<AddItemResponse>(`${this.baseUrl}/${orderId}/items`, addItemDto, {
       headers: this.getAuthHeaders()
-    });
+    }).pipe(retry({count: 1, delay: error => this.retryTransientRequest(error)}));
+  }
+
+  updateItemQuantity(itemId: number, quantity: number): Observable<any> {
+    const updateItemDto: UpdateItemQuantityDto = {quantity};
+    return this.http.put<any>(`${this.baseUrl}/items/${itemId}`, updateItemDto, {
+      headers: this.getAuthHeaders()
+    }).pipe(retry({count: 1, delay: error => this.retryTransientRequest(error)}));
   }
 
   deleteItemFromOrder(itemId: number): Observable<DeleteItemResponse> {
     return this.http.delete<DeleteItemResponse>(`${this.baseUrl}/items/${itemId}`, {
       headers: this.getAuthHeaders()
-    });
+    }).pipe(retry({count: 1, delay: error => this.retryTransientRequest(error)}));
   }
 
   getCurrentOrder(): Observable<any> {
@@ -58,5 +69,12 @@ export class OrderService {
     return this.http.get<any>(`${this.baseUrl}`, {
       headers: this.getAuthHeaders()
     });
+  }
+
+  private retryTransientRequest(error: any): Observable<any> {
+    if (error?.status === 0 || error?.status >= 500) {
+      return timer(150);
+    }
+    return throwError(() => error);
   }
 }

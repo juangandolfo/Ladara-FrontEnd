@@ -1,8 +1,9 @@
 import { Component, computed, OnInit, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Subject, takeUntil, forkJoin, EMPTY, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, concatMap, map } from 'rxjs/operators';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
 import { DialogService } from '../../services/dialog.service';
@@ -11,6 +12,7 @@ import { DialogService } from '../../services/dialog.service';
 const TAX_RATE = 0.08;
 const MIN_QUANTITY = 1;
 const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
+const CART_REFRESH_INTERVAL = 5000;
 
 // Interfaces
 export interface CartItem {
@@ -33,6 +35,7 @@ interface CartSummary {
   couponCode: string;
   discount: number;
   tax: number;
+  envio: number;
   total: number;
 }
 
@@ -40,6 +43,12 @@ interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
+}
+
+interface QuantityUpdate {
+  itemId: number;
+  cartItemId: number;
+  quantity: number;
 }
 
 @Component({
@@ -56,10 +65,15 @@ export class CartComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly isLoggedIn = signal<boolean>(true); 
   readonly activeCoupon = signal('');
+  readonly envio = signal(0);
+  readonly authoritativeTotal = signal<number | null>(null);
 
   // Private properties
   private orderId: number | null = null;
   private readonly destroy$ = new Subject<void>();
+  private readonly quantityQueues = new Map<number, Subject<QuantityUpdate>>();
+  private readonly pendingQuantities = new Map<number, number>();
+  private refreshIntervalId: ReturnType<typeof setInterval> | null = null;
 
   // Computed properties
   readonly cartSummary = computed((): CartSummary => {
@@ -72,9 +86,11 @@ export class CartComponent implements OnInit, OnDestroy {
     const discount = this.validateCouponCode(couponCode) ? subtotal * 0.1 : 0;
     const taxableAmount = Math.max(0, subtotal - discount);
     const tax = taxableAmount * TAX_RATE;
-    const total = taxableAmount + tax;
+    const envio = this.envio();
+    const calculatedTotal = taxableAmount + tax + envio;
+    const total = this.authoritativeTotal() ?? calculatedTotal;
 
-    return { subtotal, totalItems, totalSavings, couponCode, discount, tax, total };
+    return { subtotal, totalItems, totalSavings, couponCode, discount, tax, envio, total };
   });
 
   readonly subtotal = computed(() => this.cartSummary().subtotal);
@@ -82,6 +98,7 @@ export class CartComponent implements OnInit, OnDestroy {
   readonly totalSavings = computed(() => this.cartSummary().totalSavings);
   readonly couponDiscount = computed(() => this.cartSummary().discount);
   readonly tax = computed(() => this.cartSummary().tax);
+  readonly deliveryCost = computed(() => this.cartSummary().envio);
   readonly total = computed(() => this.cartSummary().total);
 
   readonly isEmpty = computed(() => this.cartItems().length === 0);
@@ -95,13 +112,26 @@ export class CartComponent implements OnInit, OnDestroy {
   ) {}
 
    async ngOnInit(): Promise<void> {
-    this.loadCurrentOrder();
-    // Initialize login state and listen for changes
     this.updateLoginState();
     this.setupAuthStateListener();
+
+    if (this.isLoggedIn()) {
+      this.loadCurrentOrder();
+    } else {
+      this.error.set('Tu sesión ha expirado. Inicia sesión para cargar el carrito.');
+    }
+
+    this.refreshIntervalId = setInterval(() => {
+      if (this.isLoggedIn() && !document.hidden && !this.isLoading()) {
+        this.loadCurrentOrder(false);
+      }
+    }, CART_REFRESH_INTERVAL);
   } 
 
   ngOnDestroy(): void {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -109,17 +139,13 @@ export class CartComponent implements OnInit, OnDestroy {
   // Public Methods
   updateQuantity(itemId: number, newQuantity: number): void {
     const item = this.findCartItem(itemId);
-    if (!item?.productId) {
-      this.handleError('Product ID not found for update');
+    if (!item?.itemId) {
+      this.handleError('Item ID not found for update');
       return;
     }
 
-    if (newQuantity < 0) {
-      this.decrementQuantity(item);
-      return;
-    }
-
-    this.performQuantityUpdate(item, newQuantity);
+    const currentQuantity = this.pendingQuantities.get(item.itemId) ?? item.quantity;
+    this.queueQuantityUpdate(item, Math.max(0, currentQuantity + newQuantity));
   }
 
   removeItem(itemId: number): void {
@@ -129,23 +155,7 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.orderService.deleteItemFromOrder(item.itemId)
-      .pipe(
-        takeUntil(this.destroy$),
-        catchError(error => {
-          this.handleError('Error removing item', error);
-          return EMPTY;
-        })
-      )
-      .subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.cartItems.update(items => items.filter(i => i.id !== itemId));
-          } else {
-            this.handleError(`Failed to remove item: ${response.message}`);
-          }
-        }
-      });
+    this.queueQuantityUpdate(item, 0);
   }
 
   clearCart(): void {
@@ -221,37 +231,85 @@ export class CartComponent implements OnInit, OnDestroy {
     this.isLoggedIn.set(this.authService.isLoggedIn());
   }
 
-  private loadCurrentOrder(): void {
-    this.isLoading.set(true);
+  private loadCurrentOrder(showLoading = true): void {
+    if (showLoading) {
+      this.isLoading.set(true);
+    }
     this.error.set(null);
 
     this.orderService.getCurrentOrder()
       .pipe(
         takeUntil(this.destroy$),
         catchError(error => {
-          this.handleError('Error loading current order', error);
+          const message = error instanceof HttpErrorResponse && error.status === 403
+            ? 'Tu sesión ha expirado. Inicia sesión para cargar el carrito.'
+            : 'Error loading current order';
+          this.handleError(message, error);
+          if (showLoading) {
+            this.isLoading.set(false);
+          }
           return EMPTY;
         })
       )
       .subscribe({
         next: (response) => {
           this.processOrderResponse(response);
-          this.isLoading.set(false);
+          if (showLoading) {
+            this.isLoading.set(false);
+          }
+        },
+        error: () => {
+          if (showLoading) {
+            this.isLoading.set(false);
+          }
         }
       });
   }
 
-  private processOrderResponse(response: ApiResponse<any[]>): void {
-    if (!response.success || !response.data?.length) {
+  private processOrderResponse(response: ApiResponse<any[] | any>): void {
+    const orders = Array.isArray(response.data) ? response.data : response.data ? [response.data] : [];
+
+    if (!response.success || orders.length === 0) {
       console.warn('No current order found or failed to load');
+      for (const [itemId, pendingQuantity] of this.pendingQuantities) {
+        if (pendingQuantity === 0) {
+          this.pendingQuantities.delete(itemId);
+        }
+      }
+      this.orderId = null;
+      this.envio.set(0);
+      this.authoritativeTotal.set(null);
+      this.cartItems.set([]);
       return;
     }
 
-    const currentOrder = response.data[0];
+    const currentOrder = orders[0];
     this.orderId = currentOrder.id;
+    this.envio.set(Math.max(0, this.parsePrice(currentOrder.shippingCost)));
+    this.authoritativeTotal.set(this.parseOptionalPrice(currentOrder.total));
 
-    const mappedItems = this.mapOrderItemsToCartItems(currentOrder.items || []);
+    const serverItems = currentOrder.items || [];
+    this.reconcilePendingQuantities(serverItems);
+    const mappedItems = this.mapOrderItemsToCartItems(serverItems)
+      .filter(item => item.itemId == null || !this.pendingQuantities.has(item.itemId) || (this.pendingQuantities.get(item.itemId) ?? 0) > 0)
+      .map(item => {
+        const pendingQuantity = item.itemId == null ? undefined : this.pendingQuantities.get(item.itemId);
+        return pendingQuantity == null ? item : { ...item, quantity: pendingQuantity };
+      });
     this.cartItems.set(mappedItems);
+  }
+
+  private reconcilePendingQuantities(serverItems: any[]): void {
+    for (const [itemId, pendingQuantity] of this.pendingQuantities) {
+      const serverItem = serverItems.find(item => Number(item.id) === itemId);
+      const isConfirmed = pendingQuantity === 0
+        ? !serverItem
+        : Number(serverItem?.quantity) === pendingQuantity;
+
+      if (isConfirmed) {
+        this.pendingQuantities.delete(itemId);
+      }
+    }
   }
 
   private mapOrderItemsToCartItems(orderItems: any[]): CartItem[] {
@@ -288,66 +346,52 @@ export class CartComponent implements OnInit, OnDestroy {
     return `/${safeImage.replace(/^\.?\//, '')}`;
   }
 
-  private performQuantityUpdate(item: CartItem, newQuantity: number): void {
-    if (!this.orderId) {
-      this.handleError('No order ID available for update');
+  private queueQuantityUpdate(item: CartItem, quantity: number): void {
+    const itemId = item.itemId;
+    if (itemId == null) {
+      this.handleError('Item ID not found for update');
       return;
     }
 
-    this.orderService.addItemToOrder(this.orderId, item.productId!, newQuantity)
-      .pipe(
-        takeUntil(this.destroy$),
-        catchError(error => {
-          this.handleError('Error updating quantity', error);
-          return EMPTY;
-        })
-      )
-      .subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.updateLocalQuantity(item.id, newQuantity);
-          } else {
-            this.handleError(`Failed to update quantity: ${response.message}`);
+    this.pendingQuantities.set(itemId, quantity);
+    this.updateLocalQuantity(item.id, quantity);
+
+    let queue = this.quantityQueues.get(itemId);
+    if (!queue) {
+      queue = new Subject<QuantityUpdate>();
+      this.quantityQueues.set(itemId, queue);
+      queue.pipe(
+        concatMap(update => this.orderService.updateItemQuantity(update.itemId, update.quantity).pipe(
+          map(response => ({ response, update })),
+          catchError(error => {
+            this.handleError('Error updating quantity', error);
+            return EMPTY;
+          })
+        )),
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: result => {
+          if (!result.response.success) {
+            this.handleError(`Failed to update quantity: ${result.response.message}`);
+            return;
+          }
+
+          const latestQuantity = this.pendingQuantities.get(itemId);
+          if (latestQuantity === result.update.quantity) {
+            this.loadCurrentOrder(false);
           }
         }
       });
-  }
-
-  private decrementQuantity(item: CartItem): void {
-    if (!item.itemId) {
-      this.handleError('Item ID not found for decrement');
-      return;
     }
 
-    if (item.quantity <= 1) {
-      this.removeItem(item.id);
-      return;
-    }
-
-    this.orderService.deleteItemFromOrder(item.itemId)
-      .pipe(
-        takeUntil(this.destroy$),
-        catchError(error => {
-          this.handleError('Error decrementing quantity', error);
-          return EMPTY;
-        })
-      )
-      .subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.updateLocalQuantity(item.id, -1);
-          } else {
-            this.handleError(`Failed to decrement quantity: ${response.message}`);
-          }
-        }
-      });
+    queue.next({ itemId, cartItemId: item.id, quantity });
   }
 
   private createBulkDeleteOperations(items: CartItem[]) {
     return items
       .filter(item => item.itemId)
       .map(item =>
-        this.orderService.deleteItemFromOrder(item.itemId!).pipe(
+        this.orderService.updateItemQuantity(item.itemId!, 0).pipe(
           catchError(error => {
             console.error('Error deleting item:', item.name, error);
             return of({ success: false, data: null });
@@ -387,11 +431,14 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   private updateLocalQuantity(itemId: number, newQuantity: number): void {
-    this.cartItems.update(items =>
-      items.map(item =>
-        item.id === itemId ? { ...item, quantity: Math.max(1, item.quantity + newQuantity) } : item
-      )
-    );
+    if (newQuantity <= 0) {
+      this.cartItems.update(items => items.filter(item => item.id !== itemId));
+      return;
+    }
+
+    this.cartItems.update(items => items.map(item =>
+      item.id === itemId ? { ...item, quantity: newQuantity } : item
+    ));
   }
 
   private calculateSubtotal(items: CartItem[]): number {
@@ -414,8 +461,14 @@ export class CartComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
-  private parsePrice(price: string | number): number {
-    return typeof price === 'string' ? parseFloat(price) : price;
+  private parsePrice(price?: string | number): number {
+    const parsed = typeof price === 'string' ? parseFloat(price) : price;
+    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private parseOptionalPrice(price?: string | number): number | null {
+    const parsed = typeof price === 'string' ? parseFloat(price) : price;
+    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : null;
   }
 
   private handleError(message: string, error?: any): void {
