@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { DialogService } from '../../services/dialog.service';
 
 // Constants
-const DEFAULT_ITEMS_PER_PAGE = 8;
+const DEFAULT_ITEMS_PER_PAGE = 4;
 const SEARCH_DEBOUNCE_TIME = 300;
 const TAX_RATE = 0.08;
 const MAX_VISIBLE_PAGES = 7;
@@ -205,7 +205,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (this.isValidPage(page)) {
       this.currentPage.set(page);
       this.fetchFilteredProducts();
-      this.scrollToProducts();
     }
   }
 
@@ -595,9 +594,4 @@ export class HomeComponent implements OnInit, OnDestroy {
     return page >= 1 && page <= this.totalPages();
   }
 
-  private scrollToProducts(): void {
-    document.querySelector('.products-grid')?.scrollIntoView({
-      behavior: 'smooth'
-    });
-  }
 }
