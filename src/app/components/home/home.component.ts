@@ -1,7 +1,7 @@
 import { Component, computed, OnInit, signal, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { Product } from '../../services/models/product.models';
 import { ProductService } from '../../services/product.service';
@@ -34,7 +34,7 @@ interface PaginationInfo {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule],//, NgOptimizedImage],
+  imports: [CommonModule, FormsModule, RouterLink],//, NgOptimizedImage],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
@@ -50,6 +50,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   readonly isLoading = signal(false);
   readonly isLoggedIn = signal(false);
   readonly productQuantities = signal<Map<number, number>>(new Map());
+  readonly cartFeedback = signal('');
   heroOpacity = signal(1);
   heroScale = signal(1);
   heroTranslateY = signal(0);
@@ -274,7 +275,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   // Product Methods
-  addToCart(productId: number, quantity: number = 1): void {
+  addToCart(productId: number, quantity: number = 1, event?: Event): void {
     // Check if user is logged in before adding to cart
     if (!this.isLoggedIn()) {
       this.dialogService.confirm(
@@ -298,10 +299,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.addItemToCurrentOrder(productId, quantity);
+    this.addItemToCurrentOrder(productId, quantity, event);
   }
 
-  private addItemToCurrentOrder(productId: number, quantity: number): void {
+  private addItemToCurrentOrder(productId: number, quantity: number, event?: Event): void {
     const addItem = (orderId: number) => this.orderService.addItemToOrder(orderId, productId, quantity);
     const request = this.currentOrderId
       ? addItem(this.currentOrderId)
@@ -325,14 +326,8 @@ export class HomeComponent implements OnInit, OnDestroy {
           if (response.success) {
             // Reset quantity to 1 after successful add
             this.updateProductQuantity(productId, 1);
-
-            // Show success message
-            this.dialogService.alert(
-              'El producto se ha añadido al carrito exitosamente',
-              '¡Producto añadido!',
-              'success',
-              2000
-            );
+            this.cartFeedback.set('Producto añadido al carrito');
+            this.animateCardToCart(productId, event);
           } else {
             console.error('Failed to add item:', response.message);
           }
@@ -346,6 +341,55 @@ export class HomeComponent implements OnInit, OnDestroy {
           );
         }
       });
+  }
+
+  private animateCardToCart(productId: number, event?: Event): void {
+    const trigger = event?.currentTarget as HTMLElement | null;
+    const sourceCard = trigger?.closest<HTMLElement>('.product-card')
+      ?? document.querySelector<HTMLElement>(`[data-product-id="${productId}"]`);
+    const destination = document.querySelector<HTMLElement>('#cart-destination');
+
+    if (!sourceCard || !destination) {
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const destinationRect = destination.getBoundingClientRect();
+    const flyingCard = sourceCard.cloneNode(true) as HTMLElement;
+    const startX = sourceRect.left;
+    const startY = sourceRect.top;
+    const sourceCenterX = sourceRect.left + sourceRect.width / 2;
+    const sourceCenterY = sourceRect.top + sourceRect.height / 2;
+    const destinationCenterX = destinationRect.left + destinationRect.width / 2;
+    const destinationCenterY = destinationRect.top + destinationRect.height / 2;
+    const travelX = destinationCenterX - sourceCenterX;
+    const travelY = destinationCenterY - sourceCenterY;
+
+    flyingCard.classList.add('product-card-flight');
+    Object.assign(flyingCard.style, {
+      left: `${startX}px`,
+      top: `${startY}px`,
+      width: `${sourceRect.width}px`,
+      height: `${sourceRect.height}px`
+    });
+    document.body.appendChild(flyingCard);
+
+    const animation = flyingCard.animate([
+      { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 1 },
+      {
+        transform: prefersReducedMotion
+          ? 'translate3d(0, 0, 0) scale(1)'
+          : `translate3d(${travelX}px, ${travelY}px, 0) scale(0.04)`,
+        opacity: prefersReducedMotion ? 0 : 0.15
+      }
+    ], {
+      duration: prefersReducedMotion ? 180 : 650,
+      easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+      fill: 'forwards'
+    });
+
+    animation.finished.then(() => flyingCard.remove()).catch(() => flyingCard.remove());
   }
 
   updateProductQuantity(productId: number, quantity: number): void {
@@ -402,10 +446,6 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   getProductImage(product: Product | null | undefined): string {
     return this.normalizeProductImage(product?.image);
-  }
-
-  requestQuote(): void {
-    return
   }
 
   private normalizeProductImage(image?: string | null): string {

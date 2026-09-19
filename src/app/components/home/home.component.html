@@ -1,4 +1,6 @@
 <div class="home-container">
+  <p class="sr-only" aria-live="polite">{{ cartFeedback() }}</p>
+
   <!-- Header -->
   <header class="sticky-header">
     <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
@@ -22,7 +24,7 @@
         Mis Órdenes
       </button>
 
-      <button class="btn btn-primary" *ngIf="isLoggedIn()" (click)="goToCart()" aria-label="Ver Carrito">
+      <button id="cart-destination" class="btn btn-primary" *ngIf="isLoggedIn()" (click)="goToCart()" aria-label="Ver Carrito">
         <span class="btn-icon btn-icon-dark cart-icon" aria-hidden="true"></span>
         <span>Carrito</span>
       </button>
@@ -51,7 +53,7 @@
           <button class="btn btn-primary" (click)="scrollToGallery()">
             VER PRODUCTOS
           </button>
-          <button class="btn btn-secondary" (click)="requestQuote()">
+          <button class="btn btn-secondary" routerLink="/contactanos">
             CONTACTANOS
           </button>
         </div>
@@ -175,7 +177,7 @@
 
   <!-- Products Grid -->
   <div class="products-grid">
-    <div class="product-card" *ngFor="let product of products()">
+    <div class="product-card" *ngFor="let product of products()" [attr.data-product-id]="product.id">
       <!-- Top Product Image & Wishlist Button -->
       <div class="product-image-container">
         <img [src]="product.image || 'assets/logo.png'" [alt]="product.name" class="product-image" />
@@ -238,7 +240,7 @@
 
           <button 
             class="cart-action-btn" 
-            (click)="addToCart(product.id, getProductQuantity(product.id))"
+            (click)="addToCart(product.id, getProductQuantity(product.id), $event)"
             aria-label="Añadir al carrito">
             AÑADIR AL CARRITO
           </button>

@@ -183,6 +183,21 @@
   font-family: var(--font-ui);
 }
 
+.product-card-flight {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  pointer-events: none;
+  transform-origin: center center;
+  box-shadow: var(--shadow-lg);
+  will-change: transform, opacity;
+}
+
+.product-card-flight .wishlist-btn,
+.product-card-flight .card-actions-row {
+  visibility: hidden;
+}
+
 .product-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);

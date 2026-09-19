@@ -4,6 +4,7 @@ import {DashboardComponent} from './components/dashboard/dashboard.component';
 import {CartComponent} from './components/cart/cart.component';
 import {CheckoutComponent} from './components/checkout/checkout.component';
 import {MyOrdersComponent} from './components/my-orders/my-orders.component';
+import {ContactComponent} from './components/contact/contact.component';
 import {AdminDashboardGuard, AdminHomeRedirectGuard, AuthGuard} from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -31,6 +32,10 @@ export const routes: Routes = [
     path: 'checkout',
     component: CheckoutComponent,
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'contactanos',
+    component: ContactComponent
   },
   {path: '**', redirectTo: ''}
 ];
