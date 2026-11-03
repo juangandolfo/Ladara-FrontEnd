@@ -97,7 +97,7 @@ describe('CheckoutComponent', () => {
     (component as any).orderId = 12;
     Object.assign(component.formData, {
       firstName: 'Ada', lastName: 'Lovelace', streetAddress: '1 Example Street',
-      townCity: 'Montevideo', postcode: '11000', country: 'UY'
+      company: 'Analytical Engines', townCity: 'Montevideo', postcode: '11000', country: 'UY'
     });
     component.cartItems.set([
       { id: 99, itemId: 99, name: 'Soap', price: 10, quantity: 1, category: 'Health' }
@@ -108,6 +108,7 @@ describe('CheckoutComponent', () => {
     expect(initiateCheckout).toHaveBeenCalledWith(12, {
       billingAddress: {
         fullName: 'Ada Lovelace',
+        company: 'Analytical Engines',
         addressLine1: '1 Example Street',
         city: 'Montevideo',
         state: 'Montevideo',

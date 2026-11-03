@@ -68,6 +68,14 @@ describe('OrderService', () => {
     });
   });
 
+  it('loads all orders for the admin dashboard with authentication', () => {
+    service.getAllOrdersForAdmin().subscribe();
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/admin');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({ success: true, data: [] });
+  });
+
   it('validates a coupon code against the coupon endpoint', () => {
     service.validateCoupon('SAVE5').subscribe();
     const request = httpTesting.expectOne('http://localhost:3000/api/orders/coupons/validate');

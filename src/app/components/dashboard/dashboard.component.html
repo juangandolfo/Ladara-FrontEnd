@@ -42,10 +42,80 @@
     </section>
 
     <section class="metrics-grid" *ngIf="summary && !isLoading" aria-label="Indicadores de pedidos" aria-live="polite">
-      <article class="metric-card" *ngFor="let metric of metrics; trackBy: trackByMetricLabel">
-        <h3>{{ metric.label }}</h3>
-        <p class="metric-value">{{ metric.value | number }}</p>
-      </article>
+      <ng-container *ngFor="let metric of metrics; trackBy: trackByMetricLabel">
+        <button class="metric-card metric-card-action" *ngIf="metric.label === 'Pedidos pendientes de pago'"
+          type="button" (click)="openPendingOrders()" aria-haspopup="dialog" aria-label="Ver pedidos pendientes de pago">
+          <h3>{{ metric.label }}</h3>
+          <p class="metric-value">{{ metric.value | number }}</p>
+        </button>
+        <article class="metric-card" *ngIf="metric.label !== 'Pedidos pendientes de pago'">
+          <h3>{{ metric.label }}</h3>
+          <p class="metric-value">{{ metric.value | number }}</p>
+        </article>
+      </ng-container>
     </section>
   </main>
+
+  <dialog #pendingOrdersDialog class="pending-orders-dialog" aria-labelledby="pending-orders-title">
+    <header class="pending-orders-header">
+      <div>
+        <h2 id="pending-orders-title">Pedidos pendientes de pago</h2>
+        <p>{{ pendingOrders.length }} {{ pendingOrders.length === 1 ? 'pedido' : 'pedidos' }} por revisar</p>
+      </div>
+      <button class="dialog-close" type="button" (click)="closePendingOrders()" aria-label="Cerrar pedidos pendientes">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </header>
+
+    <div class="pending-orders-body">
+      <div class="dashboard-loading" *ngIf="isLoadingPendingOrders" role="status" aria-live="polite" aria-busy="true">
+        Cargando pedidos pendientes...
+      </div>
+
+      <section class="dashboard-error" *ngIf="pendingOrdersError && !isLoadingPendingOrders" role="alert">
+        <h3>No pudimos cargar los pedidos</h3>
+        <p>{{ pendingOrdersError }}</p>
+        <button class="btn btn-secondary" type="button" (click)="retryPendingOrders()">Reintentar</button>
+      </section>
+
+      <ng-container *ngIf="!isLoadingPendingOrders && !pendingOrdersError">
+        <div class="pending-orders-total" *ngIf="pendingOrders.length">
+          <span>Importe total pendiente</span>
+          <strong>{{ pendingOrdersTotal | currency }}</strong>
+        </div>
+
+        <div class="pending-orders-table-wrap" *ngIf="pendingOrders.length; else noPendingOrders">
+          <table class="pending-orders-table">
+            <thead>
+              <tr>
+                <th scope="col">Pedido</th>
+                <th scope="col">Nombre y apellido</th>
+                <th scope="col">Empresa</th>
+                <th scope="col">Teléfono</th>
+                <th scope="col">Fecha</th>
+                <th scope="col" class="amount-column">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let order of pendingOrders; trackBy: trackByPendingOrderId">
+                <th scope="row">#{{ order.id }}</th>
+                <td>{{ getCustomerName(order) }}</td>
+                <td>{{ order.billingAddress?.company || '—' }}</td>
+                <td>{{ order.billingAddress?.phone || 'No registrado' }}</td>
+                <td>{{ formatOrderDate(order.createdAt) }}</td>
+                <td class="amount-column">{{ order.total | currency }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #noPendingOrders>
+          <section class="pending-orders-empty" aria-live="polite">
+            <h3>No hay pedidos pendientes de pago</h3>
+            <p>Cuando se registren nuevos pedidos, aparecerán aquí.</p>
+          </section>
+        </ng-template>
+      </ng-container>
+    </div>
+  </dialog>
 </div>

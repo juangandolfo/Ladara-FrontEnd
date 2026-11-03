@@ -40,6 +40,7 @@ export interface OrderValidationResponse {
 export interface CheckoutRequest {
   billingAddress: {
     fullName: string;
+    company?: string;
     addressLine1: string;
     addressLine2?: string;
     city: string;
@@ -67,6 +68,25 @@ export interface AdminDashboardSummaryResponse {
   success: boolean;
   message?: string;
   data?: AdminDashboardSummary;
+}
+
+export interface AdminOrder {
+  id: number;
+  status: string;
+  total: number;
+  createdAt: string;
+  billingAddress?: {
+    fullName?: string;
+    company?: string;
+    phone?: string;
+  };
+  user?: { name?: string };
+}
+
+export interface AdminOrdersResponse {
+  success: boolean;
+  message?: string;
+  data?: AdminOrder[];
 }
 
 @Injectable({
@@ -126,6 +146,12 @@ export class OrderService {
 
   getAdminDashboardSummary(): Observable<AdminDashboardSummaryResponse> {
     return this.http.get<AdminDashboardSummaryResponse>(`${this.baseUrl}/admin/dashboard-summary`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getAllOrdersForAdmin(): Observable<AdminOrdersResponse> {
+    return this.http.get<AdminOrdersResponse>(`${this.baseUrl}/admin`, {
       headers: this.getAuthHeaders()
     });
   }

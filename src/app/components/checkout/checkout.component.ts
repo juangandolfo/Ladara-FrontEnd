@@ -212,6 +212,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         const checkout: CheckoutRequest = {
           billingAddress: {
             fullName: `${this.formData.firstName.trim()} ${this.formData.lastName.trim()}`,
+            ...(this.formData.company?.trim() ? { company: this.formData.company.trim() } : {}),
             addressLine1: this.formData.streetAddress.trim(),
             ...(this.formData.streetAddress2?.trim() ? { addressLine2: this.formData.streetAddress2.trim() } : {}),
             city: this.formData.townCity.trim(),
