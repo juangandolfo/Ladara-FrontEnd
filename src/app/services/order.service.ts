@@ -57,6 +57,18 @@ export interface CheckoutResponse {
   data?: unknown;
 }
 
+export interface AdminDashboardSummary {
+  pendingPaymentCount: number;
+  preparingCount: number;
+  completedLast30DaysCount: number;
+}
+
+export interface AdminDashboardSummaryResponse {
+  success: boolean;
+  message?: string;
+  data?: AdminDashboardSummary;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -108,6 +120,12 @@ export class OrderService {
 
   getAllOrders(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getAdminDashboardSummary(): Observable<AdminDashboardSummaryResponse> {
+    return this.http.get<AdminDashboardSummaryResponse>(`${this.baseUrl}/admin/dashboard-summary`, {
       headers: this.getAuthHeaders()
     });
   }

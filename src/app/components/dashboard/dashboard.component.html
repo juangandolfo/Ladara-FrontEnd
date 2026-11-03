@@ -1,9 +1,9 @@
 <div class="home-container">
   <header class="sticky-header">
-    <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
-      <img src="assets/images/logo.png" alt="Ladara Logo" class="logo-image">
-      <h1>Ladara</h1>
-    </div>
+    <button class="logo logo-button" type="button" (click)="goHome()" aria-label="Ir al inicio">
+      <img src="assets/images/logo.png" alt="" class="logo-image">
+      <span>Ladara</span>
+    </button>
 
     <div class="header-actions">
       <button class="btn btn-secondary" *ngIf="!isLoggedIn()" type="button" (click)="login()">
@@ -28,7 +28,24 @@
     </div>
   </header>
 
-  <div class="dashboard-content">
-    <h2 class="dashboard-title">DASHBOARD</h2>
-  </div>
+  <main class="dashboard-content" aria-labelledby="dashboard-title">
+    <h2 class="dashboard-title" id="dashboard-title">Resumen de pedidos</h2>
+
+    <div class="dashboard-loading" *ngIf="isLoading" role="status" aria-live="polite" aria-busy="true">
+      Cargando indicadores de pedidos...
+    </div>
+
+    <section class="dashboard-error" *ngIf="error && !isLoading" role="alert" aria-labelledby="dashboard-error-title">
+      <h3 id="dashboard-error-title">No pudimos cargar los indicadores</h3>
+      <p>{{ error }}</p>
+      <button class="btn btn-secondary" type="button" (click)="loadSummary()">Reintentar</button>
+    </section>
+
+    <section class="metrics-grid" *ngIf="summary && !isLoading" aria-label="Indicadores de pedidos" aria-live="polite">
+      <article class="metric-card" *ngFor="let metric of metrics; trackBy: trackByMetricLabel">
+        <h3>{{ metric.label }}</h3>
+        <p class="metric-value">{{ metric.value | number }}</p>
+      </article>
+    </section>
+  </main>
 </div>

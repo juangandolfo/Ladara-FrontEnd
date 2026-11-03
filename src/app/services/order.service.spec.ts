@@ -56,6 +56,18 @@ describe('OrderService', () => {
     httpTesting.expectOne('http://localhost:3000/api/orders').flush({ success: true, data: [] });
   });
 
+  it('loads admin dashboard order summary with authentication', () => {
+    service.getAdminDashboardSummary().subscribe();
+
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/admin/dashboard-summary');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({
+      success: true,
+      data: { pendingPaymentCount: 3, preparingCount: 1, completedLast30DaysCount: 12 }
+    });
+  });
+
   it('validates a coupon code against the coupon endpoint', () => {
     service.validateCoupon('SAVE5').subscribe();
     const request = httpTesting.expectOne('http://localhost:3000/api/orders/coupons/validate');
