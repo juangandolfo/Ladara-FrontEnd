@@ -37,6 +37,14 @@ describe('OrderService', () => {
     request.flush({ success: true });
   });
 
+  it('clears the current cart through the dedicated endpoint', () => {
+    service.clearCurrentCart().subscribe();
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/current/items');
+    expect(request.request.method).toBe('DELETE');
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({ success: true });
+  });
+
   it('deletes an item and loads current and all orders', () => {
     service.deleteItemFromOrder(22).subscribe();
     service.getCurrentOrder().subscribe();
@@ -46,5 +54,44 @@ describe('OrderService', () => {
     deleteRequest.flush({ success: true });
     httpTesting.expectOne('http://localhost:3000/api/orders/current').flush({ success: true, data: [] });
     httpTesting.expectOne('http://localhost:3000/api/orders').flush({ success: true, data: [] });
+  });
+
+  it('validates a coupon code against the coupon endpoint', () => {
+    service.validateCoupon('SAVE5').subscribe();
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/coupons/validate');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ code: 'SAVE5' });
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({ success: true, data: { valid: true, code: 'SAVE5', discountAmount: 5 } });
+  });
+
+  it('validates the current order before checkout', () => {
+    service.validateCurrentOrder(8).subscribe();
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/8/validate');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({ success: true, data: { valid: false, rejectedItems: [] } });
+  });
+
+  it('submits checkout details to the order checkout endpoint', () => {
+    const checkout = {
+      billingAddress: {
+        fullName: 'Ada Lovelace',
+        addressLine1: '1 Example Street',
+        city: 'Montevideo',
+        postalCode: '11000',
+        country: 'UY'
+      },
+      paymentMethod: 'pending'
+    };
+
+    service.initiateCheckout(8, checkout).subscribe();
+
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/8/checkout');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(checkout);
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({ success: true, message: 'Checkout details saved; payment has not been processed' });
   });
 });

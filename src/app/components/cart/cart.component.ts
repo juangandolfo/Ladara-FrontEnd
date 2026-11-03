@@ -2,11 +2,13 @@ import { Component, computed, OnInit, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, EMPTY, of } from 'rxjs';
+import { Subject, takeUntil, EMPTY, of } from 'rxjs';
 import { catchError, concatMap, map } from 'rxjs/operators';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
 import { DialogService } from '../../services/dialog.service';
+import { ProductService } from '../../services/product.service';
+import { Product } from '../../services/models/product.models';
 
 // Constants
 const TAX_RATE = 0.08;
@@ -26,6 +28,9 @@ export interface CartItem {
   description?: string;
   itemId?: number; // Backend item ID for API calls
   productId?: number; // Product ID for backend
+  stock?: number;
+  previousPrice?: number;
+  priceChanged?: boolean;
 }
 
 interface CartSummary {
@@ -65,6 +70,10 @@ export class CartComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly isLoggedIn = signal<boolean>(true); 
   readonly activeCoupon = signal('');
+  readonly couponError = signal('');
+  readonly backendCouponDiscount = signal<number | null>(null);
+  readonly removingItemId = signal<number | null>(null);
+  readonly recommendedProducts = signal<Product[]>([]);
   readonly envio = signal(0);
   readonly authoritativeTotal = signal<number | null>(null);
 
@@ -83,7 +92,7 @@ export class CartComponent implements OnInit, OnDestroy {
     const totalItems = this.calculateTotalItems(items);
     const totalSavings = this.calculateTotalSavings(items);
     const couponCode = this.activeCoupon();
-    const discount = this.validateCouponCode(couponCode) ? subtotal * 0.1 : 0;
+    const discount = this.backendCouponDiscount() ?? (this.validateCouponCode(couponCode) ? subtotal * 0.1 : 0);
     const taxableAmount = Math.max(0, subtotal - discount);
     const tax = taxableAmount * TAX_RATE;
     const envio = this.envio();
@@ -108,7 +117,8 @@ export class CartComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly orderService: OrderService,
     private readonly authService: AuthService,
-    private readonly dialogService: DialogService
+    private readonly dialogService: DialogService,
+    private readonly productService?: ProductService
   ) {}
 
    async ngOnInit(): Promise<void> {
@@ -145,7 +155,15 @@ export class CartComponent implements OnInit, OnDestroy {
     }
 
     const currentQuantity = this.pendingQuantities.get(item.itemId) ?? item.quantity;
-    this.queueQuantityUpdate(item, Math.max(0, currentQuantity + newQuantity));
+    const requestedQuantity = Math.max(0, currentQuantity + newQuantity);
+    const stockLimit = item.stock;
+    if (stockLimit != null && requestedQuantity > stockLimit) {
+      this.handleError(`El stock disponible para ${item.name} es de ${stockLimit} unidades`);
+      if (currentQuantity >= stockLimit) return;
+      this.queueQuantityUpdate(item, stockLimit);
+      return;
+    }
+    this.queueQuantityUpdate(item, requestedQuantity);
   }
 
   removeItem(itemId: number): void {
@@ -155,15 +173,30 @@ export class CartComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.queueQuantityUpdate(item, 0);
+    this.removingItemId.set(itemId);
+    setTimeout(() => {
+      this.queueQuantityUpdate(item, 0);
+      this.removingItemId.set(null);
+    }, 250);
   }
 
   clearCart(): void {
     const items = this.cartItems();
     if (items.length === 0) return;
 
-    const deleteOperations = this.createBulkDeleteOperations(items);
-    this.performBulkDelete(deleteOperations);
+    this.orderService.clearCurrentCart()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.cartItems.set([]);
+          this.loadRecommendations();
+        },
+        error: error => {
+          this.handleError('Error clearing cart', error);
+          this.cartItems.set([]);
+          this.loadRecommendations();
+        }
+      });
   }
 
   onCouponClick(): void {
@@ -171,14 +204,50 @@ export class CartComponent implements OnInit, OnDestroy {
       'Ingresa tu código de cupón:',
       'Cupón de descuento'
     ).then(code => {
-      if (code) {
-        this.activeCoupon.set(code.trim());
+      if (code) this.applyCouponCode(code.trim());
+    });
+  }
+
+  applyCouponCode(code: string): void {
+    this.couponError.set('');
+    this.backendCouponDiscount.set(null);
+    const validator = (this.orderService as OrderService & {
+      validateCoupon?: (coupon: string) => any
+    }).validateCoupon;
+
+    if (!validator) {
+      if (this.validateCouponCode(code)) {
+        this.activeCoupon.set(code);
+      } else {
+        this.couponError.set('El código de cupón no es válido');
       }
+      return;
+    }
+
+    validator.call(this.orderService, code).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response: any) => {
+        const data = response?.data;
+        if (!response?.success || data?.valid === false) {
+          this.couponError.set(response?.message || data?.message || 'El código de cupón no es válido');
+          this.activeCoupon.set('');
+          return;
+        }
+        const discount = this.parseOptionalPrice(data?.discountAmount ?? data?.discount);
+        if (discount == null || discount <= 0) {
+          this.couponError.set('El servidor devolvió un descuento inválido');
+          return;
+        }
+        this.activeCoupon.set(data.code || code);
+        this.backendCouponDiscount.set(Math.min(this.subtotal(), discount));
+      },
+      error: () => this.couponError.set('No se pudo validar el cupón. Intenta nuevamente.')
     });
   }
 
   onRemoveCoupon(): void {
     this.activeCoupon.set('');
+    this.backendCouponDiscount.set(null);
+    this.couponError.set('');
   }
 
   validateCouponCode(code: string): boolean {
@@ -280,6 +349,7 @@ export class CartComponent implements OnInit, OnDestroy {
       this.envio.set(0);
       this.authoritativeTotal.set(null);
       this.cartItems.set([]);
+      this.loadRecommendations();
       return;
     }
 
@@ -297,6 +367,7 @@ export class CartComponent implements OnInit, OnDestroy {
         return pendingQuantity == null ? item : { ...item, quantity: pendingQuantity };
       });
     this.cartItems.set(mappedItems);
+    if (mappedItems.length === 0) this.loadRecommendations();
   }
 
   private reconcilePendingQuantities(serverItems: any[]): void {
@@ -317,7 +388,12 @@ export class CartComponent implements OnInit, OnDestroy {
       id: item.id,
       name: item.product.name,
       price: this.parsePrice(item.product.price),
-      discountedPrice: item.product.discountedPrice,
+      previousPrice: this.parseOptionalPrice(item.price) !== this.parsePrice(item.product.price)
+        ? this.parseOptionalPrice(item.price) ?? undefined
+        : undefined,
+      priceChanged: this.parseOptionalPrice(item.price) != null &&
+        this.parseOptionalPrice(item.price) !== this.parsePrice(item.product.price),
+      stock: this.parseOptionalPrice(item.product.stock) ?? undefined,
       quantity: item.quantity,
       category: item.product.category,
       image: this.normalizeProductImage(item.product.image),
@@ -387,44 +463,6 @@ export class CartComponent implements OnInit, OnDestroy {
     queue.next({ itemId, cartItemId: item.id, quantity });
   }
 
-  private createBulkDeleteOperations(items: CartItem[]) {
-    return items
-      .filter(item => item.itemId)
-      .map(item =>
-        this.orderService.updateItemQuantity(item.itemId!, 0).pipe(
-          catchError(error => {
-            console.error('Error deleting item:', item.name, error);
-            return of({ success: false, data: null });
-          })
-        )
-      );
-  }
-
-  private performBulkDelete(deleteOperations: any[]): void {
-    if (deleteOperations.length === 0) {
-      this.cartItems.set([]);
-      return;
-    }
-
-    forkJoin(deleteOperations)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (responses) => {
-          const failedCount = responses.filter(r => !r.success).length;
-          if (failedCount > 0) {
-            console.warn(`${failedCount} items failed to delete from backend`);
-          }
-          // Clear cart regardless of some failures
-          this.cartItems.set([]);
-        },
-        error: (error) => {
-          this.handleError('Error clearing cart', error);
-          // Still clear the cart locally
-          this.cartItems.set([]);
-        }
-      });
-  }
-
   // Utility Methods
   private findCartItem(itemId: number): CartItem | undefined {
     return this.cartItems().find(item => item.id === itemId);
@@ -433,12 +471,21 @@ export class CartComponent implements OnInit, OnDestroy {
   private updateLocalQuantity(itemId: number, newQuantity: number): void {
     if (newQuantity <= 0) {
       this.cartItems.update(items => items.filter(item => item.id !== itemId));
+      if (this.cartItems().length === 0) this.loadRecommendations();
       return;
     }
 
     this.cartItems.update(items => items.map(item =>
       item.id === itemId ? { ...item, quantity: newQuantity } : item
     ));
+  }
+
+  private loadRecommendations(): void {
+    if (!this.productService) return;
+    this.productService.filterProductsQuery({ limit: 4, offset: 0 }).pipe(
+      catchError(() => of({ success: false, data: [], meta: { total: 0, count: 0, appliedFilters: {} } } as any)),
+      takeUntil(this.destroy$)
+    ).subscribe(response => this.recommendedProducts.set(response.success ? response.data || [] : []));
   }
 
   private calculateSubtotal(items: CartItem[]): number {

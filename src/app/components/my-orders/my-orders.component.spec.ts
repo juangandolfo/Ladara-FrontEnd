@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { MyOrdersComponent, Order, OrderStatus } from './my-orders.component';
 
 describe('MyOrdersComponent', () => {
@@ -36,7 +36,7 @@ describe('MyOrdersComponent', () => {
     expect(component.orders().map(item => item.id)).toEqual([2, 3, 1]);
     expect(component.preparingOrders().map(item => item.id)).toEqual([2]);
     expect(component.completedOrders().map(item => item.id)).toEqual([3, 1]);
-    expect(component.orderSummary()).toEqual({ preparingCount: 1, completedCount: 2, totalSpent: 18 });
+    expect(component.orderSummary()).toEqual({ pendingPaymentCount: 0, preparingCount: 1, completedCount: 2, totalSpent: 18 });
     expect(component.isEmpty()).toBeFalse();
   });
 
@@ -63,11 +63,46 @@ describe('MyOrdersComponent', () => {
 
     expect(component.getStatusText(OrderStatus.DELIVERY)).toBe('En Entrega');
     expect(component.getStatusClass(OrderStatus.DELIVERY)).toBe('status-delivery');
+    expect(component.getStatusText(OrderStatus.PENDING)).toBe('Pendiente de pago');
+    expect(component.getStatusText('awaiting_payment')).toBe('Pendiente de pago');
+    expect(component.getStatusClass('pending_payment')).toBe('status-pending');
     expect(component.calculateOrderTotal({ items: [{ id: 1, quantity: 2, product }] } as any)).toBe(30);
     expect(component.getProductImage(product as any)).toBe('/images/p.jpg');
     component.goToCart();
     component.continueShopping();
     expect(router.navigate).toHaveBeenCalledWith(['/carrito']);
     expect(router.navigate).toHaveBeenCalledWith(['/']);
+  });
+
+  it('surfaces payment-pending orders and toggles their details', () => {
+    const pendingOrder = order(4, OrderStatus.PENDING, '2025-04-01', 12);
+    const component = createComponent({
+      getAllOrders: () => of({ success: true, data: [pendingOrder] })
+    });
+
+    component.loadOrders();
+
+    expect(component.pendingPaymentOrders().map(item => item.id)).toEqual([4]);
+    expect(component.preparingOrders()).toEqual([]);
+    expect(component.orderSummary().pendingPaymentCount).toBe(1);
+    expect(component.isOrderExpanded(4)).toBeFalse();
+
+    component.toggleOrderDetails(4);
+    expect(component.isOrderExpanded(4)).toBeTrue();
+    component.toggleOrderDetails(4);
+    expect(component.isOrderExpanded(4)).toBeFalse();
+  });
+
+  it('keeps load errors visible and clears the loading state', () => {
+    const component = createComponent({
+      getAllOrders: () => throwError(() => new Error('Network error'))
+    });
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    component.loadOrders();
+
+    expect(component.isLoading()).toBeFalse();
+    expect(component.error()).toBe('Error al cargar las órdenes');
+    expect(component.isEmpty()).toBeFalse();
   });
 });

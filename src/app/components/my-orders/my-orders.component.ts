@@ -6,13 +6,13 @@ import { catchError } from 'rxjs/operators';
 import { OrderService } from '../../services/order.service';
 
 // Constants
-const ERROR_DISPLAY_DURATION = 5000;
 const DEFAULT_PLACEHOLDER_IMAGE = '/vacuna.jpg';
 
 // Enums
 export enum OrderStatus {
   CART = 'cart',
   PENDING = 'pending',
+  PENDING_PAYMENT = 'pending_payment',
   PREPARING = 'preparing',
   DELIVERY = 'delivery',
   COMPLETED = 'completed',
@@ -45,6 +45,7 @@ export interface Order {
 }
 
 interface OrderSummary {
+  pendingPaymentCount: number;
   preparingCount: number;
   completedCount: number;
   totalSpent: number;
@@ -66,6 +67,7 @@ interface ApiResponse<T> {
 export class MyOrdersComponent implements OnInit, OnDestroy {
   // Signals
   readonly orders = signal<Order[]>([]);
+  readonly expandedOrderIds = signal<Set<number>>(new Set());
   readonly isLoading = signal(true);
   readonly error = signal<string | null>(null);
   readonly isRepeatingOrder = signal(false);
@@ -75,8 +77,12 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   // Computed properties
+  readonly pendingPaymentOrders = computed(() =>
+    this.orders().filter(order => this.isPaymentPending(order.status))
+  );
+
   readonly preparingOrders = computed(() =>
-    this.getOrdersByStatus([OrderStatus.PREPARING, OrderStatus.PENDING, OrderStatus.DELIVERY])
+    this.getOrdersByStatus([OrderStatus.PREPARING, OrderStatus.DELIVERY])
   );
 
   readonly completedOrders = computed(() =>
@@ -86,6 +92,7 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   readonly orderSummary = computed((): OrderSummary => {
     const orders = this.orders();
     return {
+      pendingPaymentCount: this.pendingPaymentOrders().length,
       preparingCount: this.preparingOrders().length,
       completedCount: this.completedOrders().length,
       totalSpent: this.calculateTotalSpent(orders)
@@ -93,7 +100,7 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   });
 
   readonly hasOrders = computed(() => this.orders().length > 0);
-  readonly isEmpty = computed(() => !this.hasOrders() && !this.isLoading());
+  readonly isEmpty = computed(() => !this.hasOrders() && !this.isLoading() && !this.error());
 
   constructor(
     private readonly router: Router,
@@ -119,6 +126,7 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
         catchError(error => {
           this.handleError('Error al cargar las órdenes', error);
+          this.setLoadingState(false);
           return EMPTY;
         })
       )
@@ -146,9 +154,14 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
 
   // Utility Methods
   getStatusText(status: OrderStatus | string): string {
+    if (this.isPaymentPending(status)) {
+      return 'Pendiente de pago';
+    }
+
     const statusTextMap: Record<OrderStatus, string> = {
       [OrderStatus.CART]: 'En Carrito',
       [OrderStatus.PENDING]: 'Pendiente',
+      [OrderStatus.PENDING_PAYMENT]: 'Pendiente de pago',
       [OrderStatus.PREPARING]: 'Preparando',
       [OrderStatus.DELIVERY]: 'En Entrega',
       [OrderStatus.COMPLETED]: 'Completado',
@@ -158,15 +171,42 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   }
 
   getStatusClass(status: OrderStatus | string): string {
+    if (this.isPaymentPending(status)) {
+      return 'status-pending';
+    }
+
     const statusClassMap: Record<OrderStatus, string> = {
       [OrderStatus.CART]: 'status-cart',
       [OrderStatus.PENDING]: 'status-pending',
+      [OrderStatus.PENDING_PAYMENT]: 'status-pending',
       [OrderStatus.PREPARING]: 'status-preparing',
       [OrderStatus.DELIVERY]: 'status-delivery',
       [OrderStatus.COMPLETED]: 'status-completed',
       [OrderStatus.CANCELLED]: 'status-cancelled'
     };
     return statusClassMap[status as OrderStatus] || 'status-default';
+  }
+
+  isPaymentPending(status: OrderStatus | string): boolean {
+    const normalizedStatus = String(status).trim().toLowerCase().replace(/[\s-]+/g, '_');
+    return ['pending', 'pending_payment', 'awaiting_payment', 'waiting_for_payment']
+      .includes(normalizedStatus);
+  }
+
+  isOrderExpanded(orderId: number): boolean {
+    return this.expandedOrderIds().has(orderId);
+  }
+
+  toggleOrderDetails(orderId: number): void {
+    this.expandedOrderIds.update(expandedIds => {
+      const nextExpandedIds = new Set(expandedIds);
+      if (nextExpandedIds.has(orderId)) {
+        nextExpandedIds.delete(orderId);
+      } else {
+        nextExpandedIds.add(orderId);
+      }
+      return nextExpandedIds;
+    });
   }
 
   calculateOrderTotal(order: Order): number {
@@ -244,14 +284,15 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   }
 
   private sortOrdersByDate(orders: Order[]): Order[] {
-    return orders.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return [...orders].sort((a, b) => {
+      const paymentPriority = Number(this.isPaymentPending(b.status)) - Number(this.isPaymentPending(a.status));
+      return paymentPriority || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
 
   private getOrdersByStatus(statuses: OrderStatus[]): Order[] {
     return this.orders()
-      .filter(order => statuses.includes(order.status))
+      .filter(order => statuses.includes(order.status) && !this.isPaymentPending(order.status))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
@@ -339,13 +380,6 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   private handleError(message: string, error?: any): void {
     console.error(message, error);
     this.error.set(message);
-
-    // Auto-clear error after duration
-    setTimeout(() => {
-      if (this.error() === message) {
-        this.clearError();
-      }
-    }, ERROR_DISPLAY_DURATION);
   }
 
   private navigateToCart(): void {

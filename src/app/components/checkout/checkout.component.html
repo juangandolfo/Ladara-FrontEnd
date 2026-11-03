@@ -214,6 +214,8 @@
     <div class="summary-card">
       <h3>Resumen del Pedido</h3>
 
+        <p class="checkout-validation-error" *ngIf="error()" role="alert" aria-live="assertive">{{ error() }}</p>
+
       <div *ngIf="isLoading()" class="loading-spinner">
         Cargando productos...
       </div>
@@ -222,11 +224,14 @@
         No hay productos en el carrito.
       </div>
 
-      <div class="order-item-details" *ngFor="let item of orderSummary().items">
+      <div class="order-item-details" *ngFor="let item of orderSummary().items" [class.rejected]="rejectedItemIds().includes(item.itemId || item.id || -1)">
         <div class="item-title">
           <span>{{ item.name }} × {{ item.quantity }}</span>
           <span class="item-price-val">{{ item.itemTotal | currency }}</span>
         </div>
+        <p class="rejected-item-message" *ngIf="rejectedItemIds().includes(item.itemId || item.id || -1)" role="alert">
+          Este producto requiere atención antes de continuar.
+        </p>
       </div>
 
       <div class="order-items-divider" *ngIf="orderSummary().items.length > 0"></div>
@@ -254,7 +259,7 @@
       </div>
 
       <div class="checkout-actions">
-        <button type="button" class="btn btn-primary checkout-btn" (click)="onPlaceOrder()" [disabled]="isLoading() || orderSummary().items.length === 0">
+        <button type="button" class="btn btn-primary checkout-btn" (click)="onPlaceOrder()" [disabled]="isLoading() || orderSummary().items.length === 0" [attr.aria-busy]="isLoading()">
           Realizar Pedido
         </button>
         

@@ -20,7 +20,7 @@
   </header>
 
   <!-- Error Display -->
-  <div class="error-message" *ngIf="error()">
+  <div class="error-message" *ngIf="error()" role="alert" aria-live="assertive">
     {{ error() }}
   </div>
 
@@ -37,11 +37,22 @@
   <!-- Empty Cart State -->
   <div class="empty-cart" *ngIf="isEmpty() && !isLoading()">
     <div class="empty-cart-icon">🛒</div>
-    <h2>Tu carrito esta vacio</h2>
-    <p>Parece que no has añadido nada aún.</p>
+    <h2>Tu carrito está vacío</h2>
+    <p>Parece que todavía no has añadido productos.</p>
     <button class="continue-shopping-btn" (click)="goHome()">
-      Empieza a comprar
+      Explorar catálogo
     </button>
+    <section class="cart-recommendations" *ngIf="recommendedProducts().length" aria-labelledby="recommendations-title">
+      <h3 id="recommendations-title">Productos que podrían interesarte</h3>
+      <ul>
+        <li *ngFor="let product of recommendedProducts()">
+          <span>{{ product.name }} — ${{ product.discountedPrice || product.price | number:'1.2-2' }}</span>
+          <button type="button" class="continue-shopping-btn" (click)="goHome()">
+            Ver en el catálogo
+          </button>
+        </li>
+      </ul>
+    </section>
   </div>
 
   <!-- Cart Content -->
@@ -55,7 +66,7 @@
       </div>
 
       <!-- Cart Items -->
-      <div class="cart-item" *ngFor="let item of cartItems()">
+      <div class="cart-item" *ngFor="let item of cartItems()" [class.removing]="removingItemId() === item.id">
         <div class="item-image">
           <img [src]="item.image || '/vacuna.jpg'" [alt]="item.name" (error)="item.image = '/vacuna.jpg'" />
         </div>
@@ -76,19 +87,25 @@
           <span class="discount-badge" *ngIf="item.discountedPrice">
             Ahorra ${{ (item.price - item.discountedPrice!).toFixed(2) }}
           </span>
+          <p class="price-change-notice" *ngIf="item.priceChanged" role="status" aria-live="polite">
+            El precio cambió de ${{ item.previousPrice?.toFixed(2) }} a ${{ item.price.toFixed(2) }}.
+          </p>
         </div>
 
         <div class="quantity-controls">
           <button
             class="quantity-btn decrease"
             (click)="updateQuantity(item.id, - 1)"
-            [disabled]="item.quantity <= 1">
+            [disabled]="item.quantity <= 1"
+            [attr.aria-label]="'Disminuir cantidad de ' + item.name">
             -
           </button>
           <span class="quantity">{{ item.quantity }}</span>
           <button
             class="quantity-btn increase"
-            (click)="updateQuantity(item.id, 1)">
+            (click)="updateQuantity(item.id, 1)"
+            [disabled]="item.stock != null && item.quantity >= item.stock"
+            [attr.aria-label]="item.stock != null ? 'Aumentar cantidad; stock disponible: ' + item.stock : 'Aumentar cantidad'">
             +
           </button>
         </div>
@@ -99,7 +116,7 @@
           </span>
         </div>
 
-        <button class="remove-item-btn" (click)="removeItem(item.id)">
+        <button class="remove-item-btn" (click)="removeItem(item.id)" [attr.aria-label]="'Quitar ' + item.name + ' del carrito'">
           ×
         </button>
       </div>
@@ -152,6 +169,7 @@
           <p class="coupon-action-text">
             ¿Tienes un cupón? <a href="javascript:void(0)" (click)="onCouponClick()">Ingresa tu código aquí</a>
           </p>
+          <p class="coupon-error" *ngIf="couponError()" role="alert" aria-live="assertive">{{ couponError() }}</p>
         </div>
       </div>
     </div>

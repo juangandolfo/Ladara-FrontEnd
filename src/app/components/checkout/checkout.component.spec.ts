@@ -41,4 +41,82 @@ describe('CheckoutComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/']);
     expect(router.navigate).toHaveBeenCalledWith(['/carrito']);
   });
+
+  it('FE-ACT-06 blocks checkout and highlights items rejected by backend validation', () => {
+    const validateCurrentOrder = jasmine.createSpy('validateCurrentOrder').and.returnValue(of({
+      success: true,
+      data: {
+        valid: false,
+        rejectedItems: [{ itemId: 99, reason: 'OUT_OF_STOCK', message: 'Stock insuficiente' }]
+      }
+    }));
+    const initiateCheckout = jasmine.createSpy('initiateCheckout');
+    const alert = jasmine.createSpy('alert').and.returnValue(Promise.resolve(true));
+    const component = new CheckoutComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { validateCurrentOrder, initiateCheckout } as any,
+      { isLoggedIn: () => true } as any,
+      { getAllCategories: () => of({ success: true, data: [] }) } as any,
+      { alert } as any
+    );
+    (component as any).orderId = 12;
+    Object.assign(component.formData, {
+      firstName: 'Ada', lastName: 'Lovelace', streetAddress: '1 Example Street',
+      townCity: 'Montevideo', postcode: '11000'
+    });
+    component.cartItems.set([
+      { id: 99, itemId: 99, name: 'Soap', price: 10, quantity: 1, category: 'Health' }
+    ]);
+
+    component.onPlaceOrder();
+
+    expect(validateCurrentOrder).toHaveBeenCalledWith(12);
+    expect(initiateCheckout).not.toHaveBeenCalled();
+    expect(component.rejectedItemIds()).toEqual([99]);
+    expect(component.error()).toContain('Stock insuficiente');
+    expect(alert).not.toHaveBeenCalled();
+  });
+
+  it('submits checkout after successful order validation', () => {
+    const validateCurrentOrder = jasmine.createSpy('validateCurrentOrder').and.returnValue(of({
+      success: true,
+      data: { valid: true, rejectedItems: [] }
+    }));
+    const initiateCheckout = jasmine.createSpy('initiateCheckout').and.returnValue(of({
+      success: true,
+      message: 'Checkout details saved; payment has not been processed'
+    }));
+    const alert = jasmine.createSpy('alert').and.returnValue(Promise.resolve(true));
+    const component = new CheckoutComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { validateCurrentOrder, initiateCheckout } as any,
+      { isLoggedIn: () => true } as any,
+      { getAllCategories: () => of({ success: true, data: [] }) } as any,
+      { alert } as any
+    );
+    (component as any).orderId = 12;
+    Object.assign(component.formData, {
+      firstName: 'Ada', lastName: 'Lovelace', streetAddress: '1 Example Street',
+      townCity: 'Montevideo', postcode: '11000', country: 'UY'
+    });
+    component.cartItems.set([
+      { id: 99, itemId: 99, name: 'Soap', price: 10, quantity: 1, category: 'Health' }
+    ]);
+
+    component.onPlaceOrder();
+
+    expect(initiateCheckout).toHaveBeenCalledWith(12, {
+      billingAddress: {
+        fullName: 'Ada Lovelace',
+        addressLine1: '1 Example Street',
+        city: 'Montevideo',
+        state: 'Montevideo',
+        postalCode: '11000',
+        country: 'UY'
+      },
+      paymentMethod: 'pending'
+    });
+    expect(alert).toHaveBeenCalledWith('Pedido enviado. El pago aún está pendiente.', 'Pedido iniciado', 'success');
+    expect(component.isLoading()).toBeFalse();
+  });
 });

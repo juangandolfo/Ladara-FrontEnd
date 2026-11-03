@@ -1,6 +1,5 @@
 <div class="home-container">
-  <p class="sr-only" aria-live="polite">{{ cartFeedback() }}</p>
-
+  <p class="sr-only" aria-live="polite" *ngIf="!showCartMiniSummary()">{{ cartFeedback() }}</p>
   <!-- Header -->
   <header class="sticky-header">
     <div class="logo" (click)="goHome()" tabindex="0" (keydown.enter)="goHome()" role="button">
@@ -24,12 +23,20 @@
         Mis Órdenes
       </button>
 
-      <button id="cart-destination" class="btn btn-primary" *ngIf="isLoggedIn()" (click)="goToCart()" aria-label="Ver Carrito">
+      <button id="cart-destination" class="btn btn-primary" (click)="goToCart()" [attr.aria-label]="'Ver Carrito, ' + cartItemCount() + ' artículos'">
         <span class="btn-icon btn-icon-dark cart-icon" aria-hidden="true"></span>
         <span>Carrito</span>
+        <span class="cart-count" *ngIf="cartItemCount() > 0" aria-hidden="true">{{ cartItemCount() }}</span>
       </button>
     </div>
   </header>
+
+  <div class="cart-feedback" *ngIf="cartFeedback() && showCartMiniSummary()" role="status" aria-live="polite">
+    <span>{{ cartFeedback() }}</span>
+    <button type="button" class="cart-feedback-link" (click)="goToCart()">
+      Ver carrito ({{ cartItemCount() }})
+    </button>
+  </div>
 
   <!-- Hero Section -->
   <div 
@@ -217,7 +224,7 @@
             <button
               class="quantity-btn decrease"
               (click)="updateProductQuantity(product.id, getProductQuantity(product.id) - 1)"
-              [disabled]="getProductQuantity(product.id) <= 1"
+              [disabled]="getProductQuantity(product.id) <= 1 || product.stock === 0"
               aria-label="Disminuir cantidad">
               −
             </button>
@@ -225,14 +232,16 @@
               class="quantity-input"
               type="number"
               min="1"
-              max="100"
+              [max]="getProductMaxQuantity(product.id)"
               [value]="getProductQuantity(product.id)"
               (change)="onQuantityInputChange(product.id, $event)"
+              [disabled]="product.stock === 0"
               aria-label="Cantidad"
             />
             <button
               class="quantity-btn increase"
               (click)="updateProductQuantity(product.id, getProductQuantity(product.id) + 1)"
+              [disabled]="product.stock === 0 || getProductQuantity(product.id) >= getProductMaxQuantity(product.id)"
               aria-label="Aumentar cantidad">
               +
             </button>
@@ -241,7 +250,8 @@
           <button 
             class="cart-action-btn" 
             (click)="addToCart(product.id, getProductQuantity(product.id), $event)"
-            aria-label="Añadir al carrito">
+            aria-label="Añadir al carrito"
+            [disabled]="product.stock === 0">
             AÑADIR AL CARRITO
           </button>
         </div>

@@ -77,6 +77,27 @@ describe('HomeComponent', () => {
     );
   });
 
+  it('FE-ACT-01 adds the selected quantity and exposes cart count and mini-summary CTA', () => {
+    const addItemToOrder = jasmine.createSpy('addItemToOrder').and.returnValue(of({ success: true }));
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { filterProductsQuery: jasmine.createSpy().and.returnValue(of({ data: [], meta: { total: 0 } })) } as any,
+      { addItemToOrder } as any,
+      { isLoggedIn: () => true, loginWithGoogle: jasmine.createSpy('loginWithGoogle') } as any,
+      dialogService as any
+    );
+    component.isLoggedIn.set(true);
+    component['currentOrderId'] = 42;
+
+    component.addToCart(5, 2);
+
+    expect(addItemToOrder).toHaveBeenCalledWith(42, 5, 2);
+    expect(component.cartFeedback()).toBe('Producto añadido al carrito');
+    expect(component.cartItemCount()).toBe(2);
+    expect(component.showCartMiniSummary()).toBeTrue();
+    expect(component.getProductQuantity(5)).toBe(1);
+  });
+
   it('should apply the selected category and refetch from the first page', () => {
     const component = createComponent();
     const fetchSpy = spyOn<any>(component, 'fetchFilteredProducts');
@@ -155,5 +176,38 @@ describe('HomeComponent', () => {
 
     expect(currentOrder).toHaveBeenCalled();
     expect(component['currentOrderId']).toBe(42);
+  });
+
+  it('FE-DATA-01 persists a guest cart locally and synchronizes it after login', async () => {
+    localStorage.removeItem('ladara-guest-cart');
+    let loggedIn = false;
+    const addItemToOrder = jasmine.createSpy('addItemToOrder').and.returnValue(of({ success: true }));
+    const getCurrentOrder = jasmine.createSpy('getCurrentOrder').and.returnValue(of({
+      success: true,
+      data: [{ id: 42, items: [] }]
+    }));
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { filterProductsQuery: jasmine.createSpy().and.returnValue(of({ data: [], meta: { total: 0 } })) } as any,
+      { getCurrentOrder, addItemToOrder } as any,
+      { isLoggedIn: () => loggedIn, loginWithGoogle: jasmine.createSpy('loginWithGoogle') } as any,
+      dialogService as any
+    );
+
+    component.addToCart(5, 2);
+    expect(JSON.parse(localStorage.getItem('ladara-guest-cart') || '[]')).toEqual([
+      { productId: 5, quantity: 2 }
+    ]);
+    expect(component.cartItemCount()).toBe(2);
+
+    loggedIn = true;
+    component['handleAuthStateChange']();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(getCurrentOrder).toHaveBeenCalled();
+    expect(addItemToOrder).toHaveBeenCalledWith(42, 5, 2);
+    expect(localStorage.getItem('ladara-guest-cart')).toBeNull();
+    expect(component.guestCart()).toEqual([]);
   });
 });

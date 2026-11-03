@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
-import { OrderService } from '../../services/order.service';
+import { CheckoutRequest, OrderService } from '../../services/order.service';
 import { FormsModule } from '@angular/forms'; 
 import { AuthService } from '../../services/auth.service';
 import { ProductService } from '../../services/product.service';
@@ -13,6 +13,7 @@ import { DialogService } from '../../services/dialog.service';
 const TAX_RATE = 0.08;
 const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
 const ALL_CATEGORIES = 'Todas';
+const PENDING_PAYMENT_METHOD = 'pending';
 
 export interface BillingFormData {
   firstName: string;
@@ -44,6 +45,8 @@ export interface CartItem {
 }
 
 export interface SummaryItem {
+  id?: number;
+  itemId?: number;
   name: string;
   quantity: number;
   price: number;
@@ -78,6 +81,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   readonly cartItems = signal<CartItem[]>([]);
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly rejectedItemIds = signal<number[]>([]);
   readonly activeCoupon = signal<string>('DISCOUNT10'); // Managed via signal for dynamic reactivity
   readonly isLoggedIn = signal<boolean>(true); 
   readonly categories = signal<string[]>([]);
@@ -109,6 +113,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     const items: SummaryItem[] = rawItems.map(item => {
       const activePrice = item.discountedPrice && item.discountedPrice > 0 ? item.discountedPrice : item.price;
       return {
+        id: item.id,
+        itemId: item.itemId,
         name: item.name,
         quantity: item.quantity,
         price: activePrice,
@@ -144,9 +150,9 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    // Initialize login state and listen for changes
     this.updateLoginState();
     this.setupAuthStateListener();
+    this.loadCurrentOrder();
   }
 
   ngOnDestroy(): void {
@@ -170,15 +176,79 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   }
 
   onPlaceOrder(): void {
+    if (this.isLoading()) return;
+
     if (!this.orderSummary().items.length) {
       this.dialogService.alert('Tu carrito está vacío.', 'Carrito vacío', 'warning');
       return;
     }
-    this.dialogService.alert(
-      `Pedido realizado con éxito por un total de $${this.orderSummary().total.toFixed(2)}`,
-      'Pedido realizado',
-      'success'
-    );
+
+    if (![this.formData.firstName, this.formData.lastName, this.formData.streetAddress,
+      this.formData.townCity, this.formData.postcode, this.formData.country].every(value => value.trim())) {
+      this.error.set('Completa los datos de facturación obligatorios antes de continuar.');
+      return;
+    }
+
+    const validator = (this.orderService as OrderService & {
+      validateCurrentOrder?: (orderId: number) => any
+    }).validateCurrentOrder;
+    if (!this.orderId || !validator) {
+      this.error.set('No se pudo validar el pedido. Intenta nuevamente.');
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.error.set(null);
+    validator.call(this.orderService, this.orderId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response: any) => {
+        this.isLoading.set(false);
+        const rejectedItems = response?.data?.rejectedItems || [];
+        if (!response?.success || response?.data?.valid !== true || rejectedItems.length) {
+          this.rejectedItemIds.set(rejectedItems.map((item: any) => Number(item.itemId)).filter(Number.isFinite));
+          this.error.set(rejectedItems.map((item: any) => item.message).filter(Boolean).join('. ') || response?.message || 'Hay productos que requieren atención antes de continuar.');
+          return;
+        }
+        this.rejectedItemIds.set([]);
+        const checkout: CheckoutRequest = {
+          billingAddress: {
+            fullName: `${this.formData.firstName.trim()} ${this.formData.lastName.trim()}`,
+            addressLine1: this.formData.streetAddress.trim(),
+            ...(this.formData.streetAddress2?.trim() ? { addressLine2: this.formData.streetAddress2.trim() } : {}),
+            city: this.formData.townCity.trim(),
+            ...(this.formData.state?.trim() ? { state: this.formData.state.trim() } : {}),
+            postalCode: this.formData.postcode.trim(),
+            country: this.formData.country.trim(),
+            ...(this.formData.phone?.trim() ? { phone: this.formData.phone.trim() } : {})
+          },
+          paymentMethod: PENDING_PAYMENT_METHOD
+        };
+
+        this.orderService.initiateCheckout(this.orderId!, checkout)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (checkoutResponse) => {
+              this.isLoading.set(false);
+              if (!checkoutResponse?.success) {
+                this.error.set(checkoutResponse?.message || 'No se pudo iniciar el pedido. Intenta nuevamente.');
+                return;
+              }
+              this.dialogService.alert(
+                'Pedido enviado. El pago aún está pendiente.',
+                'Pedido iniciado',
+                'success'
+              );
+            },
+            error: (checkoutError) => {
+              this.isLoading.set(false);
+              this.error.set(checkoutError?.error?.message || 'No se pudo iniciar el pedido con el servidor. Intenta nuevamente.');
+            }
+          });
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.error.set('No se pudo validar el pedido con el servidor. Intenta nuevamente.');
+      }
+    });
   }
 
   validateCouponCode(code: string): boolean {
@@ -231,5 +301,34 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     console.error(message, error);
     this.error.set(message);
     setTimeout(() => this.error.set(null), 5000);
+  }
+
+  private loadCurrentOrder(): void {
+    const getCurrentOrder = (this.orderService as OrderService & { getCurrentOrder?: () => any }).getCurrentOrder;
+    if (!getCurrentOrder) return;
+    this.isLoading.set(true);
+    getCurrentOrder.call(this.orderService).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (response: any) => {
+        const order = Array.isArray(response?.data) ? response.data[0] : response?.data;
+        this.orderId = Number(order?.id) || null;
+        const items = (order?.items || []).map((item: any) => ({
+          id: item.id,
+          itemId: item.id,
+          productId: item.product?.id,
+          name: item.product?.name || 'Producto',
+          price: Number(item.product?.price ?? item.price) || 0,
+          discountedPrice: Number(item.product?.discountedPrice) || undefined,
+          quantity: Number(item.quantity) || 0,
+          category: item.product?.category || '',
+          stock: Number.isFinite(Number(item.product?.stock)) ? Number(item.product.stock) : undefined
+        }));
+        this.cartItems.set(items);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.error.set('No se pudo cargar el carrito para el pago.');
+      }
+    });
   }
 }

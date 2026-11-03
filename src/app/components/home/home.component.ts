@@ -2,7 +2,7 @@ import { Component, computed, OnInit, signal, OnDestroy, HostListener } from '@a
 import { CommonModule, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, forkJoin, map } from 'rxjs';
 import { Product } from '../../services/models/product.models';
 import { ProductService } from '../../services/product.service';
 import { OrderService } from '../../services/order.service';
@@ -31,6 +31,11 @@ interface PaginationInfo {
   total: number;
 }
 
+interface GuestCartItem {
+  productId: number;
+  quantity: number;
+}
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -51,6 +56,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   readonly isLoggedIn = signal(false);
   readonly productQuantities = signal<Map<number, number>>(new Map());
   readonly cartFeedback = signal('');
+  readonly guestCart = signal<GuestCartItem[]>(this.readGuestCart());
+  readonly serverCartItemCount = signal(0);
+  readonly showCartMiniSummary = signal(false);
+  readonly cartItemCount = computed(() =>
+    this.serverCartItemCount() + this.guestCart().reduce((count, item) => count + item.quantity, 0)
+  );
   heroOpacity = signal(1);
   heroScale = signal(1);
   heroTranslateY = signal(0);
@@ -100,7 +111,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     try {
       this.isLoading.set(true);
       await Promise.all([
-        this.initializeCurrentOrder(),
+        this.isLoggedIn() ? this.initializeCurrentOrder() : Promise.resolve(),
         this.loadCategories()
       ]);
       this.fetchFilteredProducts();
@@ -276,30 +287,26 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   // Product Methods
   addToCart(productId: number, quantity: number = 1, event?: Event): void {
-    // Check if user is logged in before adding to cart
+    const product = this.products().find(candidate => candidate.id === productId);
+    const availableStock = product?.stock;
+    if (availableStock === 0) {
+      this.cartFeedback.set('Producto sin stock disponible');
+      return;
+    }
+    const maxQuantity = Math.min(100, availableStock ?? 100);
+    const validQuantity = Math.max(1, Math.min(quantity, maxQuantity));
+    if (validQuantity < quantity) {
+      this.cartFeedback.set(`Stock disponible: ${availableStock} unidades`);
+    }
+
     if (!this.isLoggedIn()) {
-      this.dialogService.confirm(
-        'Debes iniciar sesión para continuar.',
-        'Inicio de sesión requerido'
-      ).then(confirmed => {
-        if (confirmed) {
-          this.login();
-        }
-      });
+      this.addGuestCartItem(productId, validQuantity);
+      this.showCartMiniSummary.set(true);
+      this.animateCardToCart(productId, event);
       return;
     }
 
-    // Check if quantity exceeds maximum
-    if (quantity > 100) {
-      this.dialogService.alert(
-        'No puedes añadir más de 100 productos al carrito',
-        'Cantidad máxima excedida',
-        'warning'
-      );
-      return;
-    }
-
-    this.addItemToCurrentOrder(productId, quantity, event);
+    this.addItemToCurrentOrder(productId, validQuantity, event);
   }
 
   private addItemToCurrentOrder(productId: number, quantity: number, event?: Event): void {
@@ -309,7 +316,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       : this.orderService.getCurrentOrder().pipe(
           takeUntil(this.destroy$),
           switchMap(response => {
-            const currentOrder = response?.data?.[0];
+            const currentOrder = Array.isArray(response?.data) ? response.data[0] : response?.data;
             const orderId = Number(currentOrder?.id);
             if (!Number.isInteger(orderId) || orderId < 1) {
               throw new Error('No active cart was returned by the backend');
@@ -324,6 +331,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           if (response.success) {
+            this.serverCartItemCount.update(count => count + quantity);
+            this.showCartMiniSummary.set(true);
             // Reset quantity to 1 after successful add
             this.updateProductQuantity(productId, 1);
             this.cartFeedback.set('Producto añadido al carrito');
@@ -394,16 +403,22 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   updateProductQuantity(productId: number, quantity: number): void {
     const minQuantity = 1;
-    const maxQuantity = 100;
+    const product = this.products().find(candidate => candidate.id === productId);
+    const stockLimit = product?.stock;
+    const maxQuantity = stockLimit == null ? 100 : Math.min(100, stockLimit);
 
-    // Show alert if trying to exceed maximum
+    if (maxQuantity < minQuantity) {
+      this.cartFeedback.set('Producto sin stock disponible');
+      return;
+    }
+
     if (quantity > maxQuantity) {
+      this.cartFeedback.set(`Stock máximo disponible: ${maxQuantity} unidades`);
       this.dialogService.alert(
-        'No puedes seleccionar más de 100 productos',
-        'Cantidad máxima excedida',
+        `Solo hay ${maxQuantity} unidades disponibles`,
+        'Límite de stock',
         'warning'
       );
-      return;
     }
 
     const validQuantity = Math.max(minQuantity, Math.min(maxQuantity, quantity));
@@ -415,6 +430,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     });
   }
 
+  getProductMaxQuantity(productId: number): number {
+    const stock = this.products().find(product => product.id === productId)?.stock;
+    return Math.max(0, Math.min(100, stock ?? 100));
+  }
+
   getProductQuantity(productId: number): number {
     return this.productQuantities().get(productId) || 1;
   }
@@ -423,17 +443,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     const target = event.target as HTMLInputElement;
     const value = parseInt(target.value, 10);
 
-    if (!isNaN(value) && value >= 1 && value <= 100) {
+    if (!isNaN(value) && value >= 1) {
       this.updateProductQuantity(productId, value);
-    } else if (value > 100) {
-      // Show alert and reset to max value
-      this.dialogService.alert(
-        'No puedes seleccionar más de 100 productos',
-        'Cantidad máxima excedida',
-        'warning'
-      );
-      target.value = '100';
-      this.updateProductQuantity(productId, 100);
+      target.value = this.getProductQuantity(productId).toString();
     } else {
       // Reset to current value if invalid
       target.value = this.getProductQuantity(productId).toString();
@@ -506,6 +518,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     if (!isLoggedIn) {
       this.currentOrderId = null;
+      this.serverCartItemCount.set(0);
       return;
     }
 
@@ -520,8 +533,14 @@ export class HomeComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (order: any) => {
-            const currentOrder = order?.data?.[0];
+            const currentOrder = Array.isArray(order?.data) ? order.data[0] : order?.data;
             this.currentOrderId = currentOrder?.id || null;
+            this.serverCartItemCount.set((currentOrder?.items || []).reduce(
+              (count: number, item: { quantity?: number }) => count + Number(item.quantity || 0), 0
+            ));
+            if (this.currentOrderId && this.guestCart().length) {
+              this.syncGuestCart(this.currentOrderId);
+            }
             resolve();
           },
           error: (error) => {
@@ -654,4 +673,80 @@ export class HomeComponent implements OnInit, OnDestroy {
     return page >= 1 && page <= this.totalPages();
   }
 
+  private addGuestCartItem(productId: number, quantity: number): void {
+    const currentItems = this.guestCart();
+    const existing = currentItems.find(item => item.productId === productId);
+    const maxQuantity = this.getProductMaxQuantity(productId);
+    const nextQuantity = Math.min(maxQuantity, (existing?.quantity || 0) + quantity);
+    if (existing && nextQuantity === existing.quantity) {
+      this.cartFeedback.set(`Stock máximo disponible: ${maxQuantity} unidades`);
+      return;
+    }
+    const nextItems = existing
+      ? currentItems.map(item => item.productId === productId
+          ? { ...item, quantity: nextQuantity }
+          : item)
+      : [...currentItems, { productId, quantity: nextQuantity }];
+    this.guestCart.set(nextItems);
+    this.persistGuestCart(nextItems);
+    this.cartFeedback.set('Producto añadido al carrito');
+  }
+
+  private readGuestCart(): GuestCartItem[] {
+    try {
+      const stored = localStorage.getItem('ladara-guest-cart');
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is GuestCartItem =>
+            Number.isInteger(item?.productId) && item.productId > 0 &&
+            Number.isInteger(item?.quantity) && item.quantity > 0
+          )
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private persistGuestCart(items: GuestCartItem[]): void {
+    try {
+      if (items.length) {
+        localStorage.setItem('ladara-guest-cart', JSON.stringify(items));
+      } else {
+        localStorage.removeItem('ladara-guest-cart');
+      }
+    } catch (error) {
+      console.error('Unable to persist guest cart:', error);
+      this.cartFeedback.set('No se pudo guardar el carrito en este dispositivo');
+    }
+  }
+
+  private syncGuestCart(orderId: number): void {
+    const guestItems = [...this.guestCart()];
+    if (!guestItems.length) return;
+
+    forkJoin(guestItems.map(item =>
+      this.orderService.addItemToOrder(orderId, item.productId, item.quantity)
+    )).pipe(
+      map(responses => ({
+        success: responses.every(response => response.success),
+        message: responses.find(response => !response.success)?.message
+      })),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: response => {
+        if (!response.success) {
+          this.cartFeedback.set(response.message || 'No se pudo sincronizar el carrito');
+          return;
+        }
+        this.guestCart.set([]);
+        this.persistGuestCart([]);
+        this.serverCartItemCount.update(count => count + guestItems.reduce((sum, item) => sum + item.quantity, 0));
+        this.cartFeedback.set('Tu carrito de invitado se sincronizó');
+      },
+      error: error => {
+        console.error('Unable to synchronize guest cart:', error);
+        this.cartFeedback.set('No se pudo sincronizar el carrito. Se conservaron tus productos.');
+      }
+    });
+  }
 }
