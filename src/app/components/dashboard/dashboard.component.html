@@ -56,7 +56,8 @@
     </section>
   </main>
 
-  <dialog #pendingOrdersDialog class="pending-orders-dialog" aria-labelledby="pending-orders-title">
+  <dialog #pendingOrdersDialog class="pending-orders-dialog" aria-labelledby="pending-orders-title"
+    (click)="onPendingOrdersBackdropClick($event)">
     <header class="pending-orders-header">
       <div>
         <h2 id="pending-orders-title">Pedidos pendientes de pago</h2>

@@ -68,4 +68,23 @@ describe('DashboardComponent', () => {
     expect(component.pendingOrdersError).toBe('No se pudieron cargar los pedidos pendientes de pago.');
     expect(component.isLoadingPendingOrders).toBeFalse();
   });
+
+  it('closes the pending-orders dialog only when the backdrop itself is clicked', () => {
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      {} as any
+    );
+    const dialog = {};
+    const close = jasmine.createSpy('close');
+    (component as any).pendingOrdersDialog = { nativeElement: { open: true, close } };
+
+    component.onPendingOrdersBackdropClick({ target: dialog, currentTarget: dialog } as MouseEvent);
+    expect(close).toHaveBeenCalled();
+
+    const closeOnContentClick = jasmine.createSpy('closeOnContentClick');
+    (component as any).pendingOrdersDialog.nativeElement.close = closeOnContentClick;
+    component.onPendingOrdersBackdropClick({ target: {}, currentTarget: dialog } as MouseEvent);
+    expect(closeOnContentClick).not.toHaveBeenCalled();
+  });
 });

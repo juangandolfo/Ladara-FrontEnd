@@ -121,6 +121,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (dialog?.open) dialog.close();
   }
 
+  onPendingOrdersBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.closePendingOrders();
+  }
+
   retryPendingOrders(): void {
     this.openPendingOrders();
   }

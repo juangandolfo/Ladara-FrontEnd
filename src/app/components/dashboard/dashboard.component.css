@@ -105,10 +105,15 @@
 }
 
 .pending-orders-dialog {
+  display: none;
+  position: fixed;
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
   width: min(1120px, calc(100vw - 32px));
-  height: min(800px, calc(100vh - 32px));
   height: min(800px, calc(100dvh - 32px));
-  display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
@@ -116,6 +121,10 @@
   border-radius: var(--radius-lg);
   background: var(--color-white);
   box-shadow: var(--shadow-lg);
+}
+
+.pending-orders-dialog[open] {
+  display: flex;
 }
 
 .pending-orders-dialog::backdrop {
@@ -138,7 +147,6 @@
 
 .dialog-close {
   flex: 0 0 44px;
-  width: 44px;
   height: 44px;
   border: 1px solid var(--color-secondary-border);
   border-radius: var(--radius-md);
@@ -221,7 +229,6 @@
 
   .pending-orders-dialog {
     width: calc(100vw - 16px);
-    height: calc(100vh - 16px);
     height: calc(100dvh - 16px);
   }
 
