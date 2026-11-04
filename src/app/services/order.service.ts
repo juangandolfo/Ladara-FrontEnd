@@ -73,14 +73,41 @@ export interface AdminDashboardSummaryResponse {
 export interface AdminOrder {
   id: number;
   status: string;
-  total: number;
+  total: number | string;
   createdAt: string;
+  paymentMethod?: string;
   billingAddress?: {
     fullName?: string;
     company?: string;
     phone?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
   };
   user?: { name?: string };
+  items?: AdminOrderItem[];
+}
+
+export interface AdminOrderItem {
+  id: number;
+  productId: number;
+  quantity: number;
+  price: number | string;
+  total?: number | string;
+  product?: {
+    id: number;
+    name: string;
+    price?: number | string;
+  };
+}
+
+export interface CompleteOrderResponse {
+  success: boolean;
+  message?: string;
+  data?: AdminOrder;
 }
 
 export interface AdminOrdersResponse {
@@ -152,6 +179,12 @@ export class OrderService {
 
   getAllOrdersForAdmin(): Observable<AdminOrdersResponse> {
     return this.http.get<AdminOrdersResponse>(`${this.baseUrl}/admin`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  completeOrder(orderId: number): Observable<CompleteOrderResponse> {
+    return this.http.post<CompleteOrderResponse>(`${this.baseUrl}/${orderId}/complete`, {}, {
       headers: this.getAuthHeaders()
     });
   }

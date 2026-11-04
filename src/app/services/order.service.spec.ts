@@ -76,6 +76,15 @@ describe('OrderService', () => {
     request.flush({ success: true, data: [] });
   });
 
+  it('marks an order as completed through the admin completion endpoint', () => {
+    service.completeOrder(42).subscribe();
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/42/complete');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({});
+    expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
+    request.flush({ success: true, data: { id: 42, status: 'completed', total: 80, createdAt: '2026-01-01' } });
+  });
+
   it('validates a coupon code against the coupon endpoint', () => {
     service.validateCoupon('SAVE5').subscribe();
     const request = httpTesting.expectOne('http://localhost:3000/api/orders/coupons/validate');

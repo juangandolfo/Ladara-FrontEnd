@@ -26,6 +26,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   pendingOrders: AdminOrder[] = [];
   isLoadingPendingOrders = false;
   pendingOrdersError: string | null = null;
+  selectedPendingOrder: AdminOrder | null = null;
+  selectedOrderStatus = '';
+  isUpdatingOrderStatus = false;
+  orderStatusError: string | null = null;
+  orderStatusMessage: string | null = null;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -93,6 +98,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const dialog = this.pendingOrdersDialog?.nativeElement;
     if (dialog && !dialog.open) dialog.showModal();
 
+    this.selectedPendingOrder = null;
     this.pendingOrders = [];
     this.isLoadingPendingOrders = true;
     this.pendingOrdersError = null;
@@ -119,6 +125,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   closePendingOrders(): void {
     const dialog = this.pendingOrdersDialog?.nativeElement;
     if (dialog?.open) dialog.close();
+    this.selectedPendingOrder = null;
+    this.selectedOrderStatus = '';
+    this.orderStatusError = null;
+    this.orderStatusMessage = null;
   }
 
   onPendingOrdersBackdropClick(event: MouseEvent): void {
@@ -127,6 +137,86 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   retryPendingOrders(): void {
     this.openPendingOrders();
+  }
+
+  openPendingOrderDetail(order: AdminOrder): void {
+    this.selectedPendingOrder = order;
+    this.selectedOrderStatus = order.status;
+    this.orderStatusError = null;
+    this.orderStatusMessage = null;
+  }
+
+  backToPendingOrders(): void {
+    this.selectedPendingOrder = null;
+    this.selectedOrderStatus = '';
+    this.orderStatusError = null;
+    this.orderStatusMessage = null;
+  }
+
+  changeOrderStatus(event: Event): void {
+    const order = this.selectedPendingOrder;
+    const nextStatus = (event.target as HTMLSelectElement).value;
+    if (!order || nextStatus !== 'completed' || this.isUpdatingOrderStatus) {
+      this.selectedOrderStatus = order?.status || '';
+      return;
+    }
+
+    this.selectedOrderStatus = nextStatus;
+    this.isUpdatingOrderStatus = true;
+    this.orderStatusError = null;
+    this.orderStatusMessage = null;
+
+    this.orderService.completeOrder(order.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          if (!response.success) {
+            this.selectedOrderStatus = order.status;
+            this.orderStatusError = response.message || 'No se pudo actualizar el estado del pedido.';
+          } else {
+            order.status = response.data?.status || 'completed';
+            this.selectedOrderStatus = order.status;
+            this.pendingOrders = this.pendingOrders.filter(pendingOrder => pendingOrder.id !== order.id);
+            this.orderStatusMessage = 'El pedido se marcó como completado.';
+            this.loadSummary();
+          }
+          this.isUpdatingOrderStatus = false;
+        },
+        error: () => {
+          this.selectedOrderStatus = order.status;
+          this.orderStatusError = 'No se pudo actualizar el estado del pedido. Inténtalo nuevamente.';
+          this.isUpdatingOrderStatus = false;
+        }
+      });
+  }
+
+  getOrderStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      pending: 'Pendiente de pago',
+      pending_payment: 'Pendiente de pago',
+      awaiting_payment: 'Pendiente de pago',
+      waiting_for_payment: 'Pendiente de pago',
+      preparing: 'En preparación',
+      completed: 'Completado'
+    };
+    return labels[status] || status;
+  }
+
+  getOrderItemTotal(item: NonNullable<AdminOrder['items']>[number]): number {
+    const total = Number(item.total);
+    return Number.isFinite(total) ? total : Number(item.price) * item.quantity;
+  }
+
+  getBillingAddress(order: AdminOrder): string {
+    const address = order.billingAddress;
+    return [
+      address?.addressLine1,
+      address?.addressLine2,
+      address?.city,
+      address?.state,
+      address?.postalCode,
+      address?.country
+    ].filter(value => Boolean(value?.trim())).join(', ') || 'No registrada';
   }
 
   isPaymentPending(status: string): boolean {

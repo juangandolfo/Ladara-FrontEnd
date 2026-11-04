@@ -15,7 +15,7 @@ describe('DashboardComponent', () => {
         data: { pendingPaymentCount: 4, preparingCount: 2, completedLast30DaysCount: 8 }
       })),
       getAllOrdersForAdmin: jasmine.createSpy('getAllOrdersForAdmin').and.returnValue(of({ success: true, data: [
-        { id: 21, status: 'pending_payment', total: 99.5, createdAt: '2026-01-02', billingAddress: { fullName: 'Ada Lovelace', company: 'Analytical Engines', phone: '555-0123' } },
+        { id: 21, status: 'pending_payment', total: 99.5, createdAt: '2026-01-02', billingAddress: { fullName: 'Ada Lovelace', company: 'Analytical Engines', phone: '555-0123', addressLine1: '12 Example Road', city: 'London' }, items: [{ id: 1, productId: 7, quantity: 2, price: 20, total: 40, product: { id: 7, name: 'Guantes de nitrilo' } }] },
         { id: 22, status: 'completed', total: 20, createdAt: '2026-01-01' }
       ] }))
     };
@@ -67,6 +67,44 @@ describe('DashboardComponent', () => {
 
     expect(component.pendingOrdersError).toBe('No se pudieron cargar los pedidos pendientes de pago.');
     expect(component.isLoadingPendingOrders).toBeFalse();
+  });
+
+  it('opens order details with contact and items, then marks the order completed', () => {
+    const order = {
+      id: 21,
+      status: 'pending_payment',
+      total: 40,
+      createdAt: '2026-01-02',
+      billingAddress: { fullName: 'Ada Lovelace', addressLine1: '12 Example Road', city: 'London' },
+      items: [{ id: 1, productId: 7, quantity: 2, price: 20, total: 40, product: { id: 7, name: 'Guantes de nitrilo' } }]
+    };
+    const orderService = {
+      completeOrder: jasmine.createSpy('completeOrder').and.returnValue(of({
+        success: true,
+        data: { ...order, status: 'completed' }
+      })),
+      getAdminDashboardSummary: jasmine.createSpy('getAdminDashboardSummary').and.returnValue(of({
+        success: true,
+        data: { pendingPaymentCount: 0, preparingCount: 0, completedLast30DaysCount: 1 }
+      }))
+    };
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      orderService as any
+    );
+    component.pendingOrders = [order as any];
+    component.openPendingOrderDetail(order as any);
+
+    expect(component.selectedPendingOrder?.id).toBe(21);
+    expect(component.getBillingAddress(order as any)).toBe('12 Example Road, London');
+    expect(component.getOrderItemTotal(order.items[0] as any)).toBe(40);
+    component.changeOrderStatus({ target: { value: 'completed' } } as any);
+
+    expect(orderService.completeOrder).toHaveBeenCalledWith(21);
+    expect(component.selectedPendingOrder?.status).toBe('completed');
+    expect(component.pendingOrders).toEqual([]);
+    expect(component.orderStatusMessage).toBe('El pedido se marcó como completado.');
   });
 
   it('closes the pending-orders dialog only when the backdrop itself is clicked', () => {
