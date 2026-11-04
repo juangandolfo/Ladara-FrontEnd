@@ -186,6 +186,21 @@
           <div class="invalid-feedback">Por favor ingrese un número de teléfono válido.</div>
         </div>
 
+        <fieldset class="payment-method-group" aria-describedby="payment-method-help">
+          <legend>Método de pago *</legend>
+          <label class="payment-method-option" for="payment-bank-transfer">
+            <input id="payment-bank-transfer" type="radio" name="paymentMethod"
+              [(ngModel)]="paymentMethod" value="bank_transfer" required>
+            Transferencia bancaria
+          </label>
+          <label class="payment-method-option" for="payment-cash">
+            <input id="payment-cash" type="radio" name="paymentMethod"
+              [(ngModel)]="paymentMethod" value="cash" required>
+            Efectivo
+          </label>
+          <p id="payment-method-help">El pedido registrará tu elección; el pago no se procesa en este paso.</p>
+        </fieldset>
+
         <div class="form-group form-floating">
           <input 
             type="email" 

@@ -43,12 +43,12 @@
 
     <section class="metrics-grid" *ngIf="summary && !isLoading" aria-label="Indicadores de pedidos" aria-live="polite">
       <ng-container *ngFor="let metric of metrics; trackBy: trackByMetricLabel">
-        <button class="metric-card metric-card-action" *ngIf="metric.label === 'Pedidos pendientes de pago'"
-          type="button" (click)="openPendingOrders()" aria-haspopup="dialog" aria-label="Ver pedidos pendientes de pago">
+        <button class="metric-card metric-card-action" *ngIf="metric.label === 'Pedidos realizados'"
+          type="button" (click)="openPendingOrders()" aria-haspopup="dialog" aria-label="Ver pedidos realizados">
           <h3>{{ metric.label }}</h3>
           <p class="metric-value">{{ metric.value | number }}</p>
         </button>
-        <article class="metric-card" *ngIf="metric.label !== 'Pedidos pendientes de pago'">
+        <article class="metric-card" *ngIf="metric.label !== 'Pedidos realizados'">
           <h3>{{ metric.label }}</h3>
           <p class="metric-value">{{ metric.value | number }}</p>
         </article>
@@ -60,8 +60,8 @@
     (click)="onPendingOrdersBackdropClick($event)">
     <header class="pending-orders-header">
       <div>
-        <h2 id="pending-orders-title">{{ selectedPendingOrder ? 'Pedido #' + selectedPendingOrder.id : 'Pedidos pendientes de pago' }}</h2>
-        <p *ngIf="!selectedPendingOrder">{{ pendingOrders.length }} {{ pendingOrders.length === 1 ? 'pedido' : 'pedidos' }} por revisar</p>
+        <h2 id="pending-orders-title">{{ selectedPendingOrder ? 'Pedido #' + selectedPendingOrder.id : 'Pedidos realizados' }}</h2>
+        <p *ngIf="!selectedPendingOrder">{{ pendingOrders.length }} {{ pendingOrders.length === 1 ? 'pedido' : 'pedidos' }} por gestionar</p>
         <p *ngIf="selectedPendingOrder">Información de contacto, artículos y estado</p>
       </div>
       <button class="dialog-close" type="button" (click)="closePendingOrders()" aria-label="Cerrar pedidos pendientes">
@@ -75,7 +75,7 @@
       </div>
 
       <section class="dashboard-error" *ngIf="pendingOrdersError && !isLoadingPendingOrders" role="alert">
-        <h3>No pudimos cargar los pedidos</h3>
+        <h3>No pudimos cargar los pedidos realizados</h3>
         <p>{{ pendingOrdersError }}</p>
         <button class="btn btn-secondary" type="button" (click)="retryPendingOrders()">Reintentar</button>
       </section>
@@ -94,6 +94,10 @@
             <div>
               <span class="detail-label">Total</span>
               <strong>{{ order.total | currency }}</strong>
+            </div>
+            <div>
+              <span class="detail-label">Estado del pedido</span>
+              <strong>{{ getWorkflowStatusLabel(order.status) }}</strong>
             </div>
           </div>
 
@@ -121,7 +125,7 @@
               </div>
               <div>
                 <dt>Método de pago</dt>
-                <dd>{{ order.paymentMethod || 'No registrado' }}</dd>
+                <dd>{{ getPaymentMethodLabel(order.paymentMethod) }}</dd>
               </div>
             </dl>
           </section>
@@ -153,30 +157,80 @@
             </ng-template>
           </section>
 
-          <section class="order-detail-section order-status-section" aria-labelledby="order-status-title">
-            <div class="status-control-copy">
-              <h3 id="order-status-title">Estado del pedido</h3>
-              <p id="order-status-help">El sistema permite marcar este pedido como completado.</p>
+          <section class="order-detail-section fulfillment-section" aria-labelledby="fulfillment-title">
+            <div>
+              <h3 id="fulfillment-title">Pago, facturación y entrega</h3>
+              <p class="fulfillment-help" id="fulfillment-help">
+                El pedido se completa automáticamente cuando el pago, la factura y la entrega están registrados.
+              </p>
             </div>
-            <label class="sr-only" for="pending-order-status">Cambiar estado del pedido</label>
-            <select id="pending-order-status" class="order-status-select" [value]="selectedOrderStatus"
-              (change)="changeOrderStatus($event)" [disabled]="isUpdatingOrderStatus || selectedOrderStatus === 'completed'"
-              aria-describedby="order-status-help">
-              <option [value]="order.status">{{ getOrderStatusLabel(order.status) }}</option>
-              <option *ngIf="order.status !== 'completed'" value="completed">Completado</option>
-            </select>
+
+            <div class="fulfillment-fields" *ngIf="fulfillmentForm as form">
+              <fieldset class="fulfillment-group">
+                <legend>Pago</legend>
+                <label for="payment-status">Estado del pago</label>
+                <select id="payment-status" class="fulfillment-control" [value]="form.paymentStatus"
+                  (change)="setPaymentStatus($event)" [disabled]="isUpdatingFulfillment"
+                  aria-describedby="fulfillment-help">
+                  <option value="unpaid">Pendiente</option>
+                  <option value="paid">Pagado</option>
+                </select>
+                <label for="payment-reference">Referencia del pago</label>
+                <input id="payment-reference" class="fulfillment-control" type="text" maxlength="255"
+                  [value]="form.paymentReference" (input)="setPaymentReference($event)"
+                  placeholder="Número de transferencia (opcional)" [disabled]="isUpdatingFulfillment">
+              </fieldset>
+
+              <fieldset class="fulfillment-group">
+                <legend>Factura</legend>
+                <label class="fulfillment-checkbox" for="invoice-issued">
+                  <input id="invoice-issued" type="checkbox" [checked]="form.invoiceIssued"
+                    (change)="setInvoiceIssued($event)" [disabled]="isUpdatingFulfillment">
+                  Factura emitida
+                </label>
+                <label for="invoice-identifier">Identificador de factura</label>
+                <input id="invoice-identifier" class="fulfillment-control" type="text" maxlength="100"
+                  [value]="form.invoiceIdentifier" (input)="setInvoiceIdentifier($event)"
+                  placeholder="Número de factura" [disabled]="isUpdatingFulfillment">
+              </fieldset>
+
+              <fieldset class="fulfillment-group">
+                <legend>Entrega</legend>
+                <label class="fulfillment-checkbox" for="is-delivered">
+                  <input id="is-delivered" type="checkbox" [checked]="form.isDelivered"
+                    (change)="setDelivered($event)" [disabled]="isUpdatingFulfillment">
+                  Pedido entregado
+                </label>
+                <label for="delivery-document">Documento de entrega</label>
+                <input id="delivery-document" class="fulfillment-control" type="text" maxlength="255"
+                  [value]="form.deliveryDocumentIdentifier" (input)="setDeliveryDocumentIdentifier($event)"
+                  placeholder="Identificador (opcional)" [disabled]="isUpdatingFulfillment">
+              </fieldset>
+            </div>
+
+            <dl class="fulfillment-timestamps">
+              <div><dt>Pago registrado</dt><dd>{{ order.paidAt ? formatOrderDate(order.paidAt) : 'Sin registrar' }}</dd></div>
+              <div><dt>Factura emitida</dt><dd>{{ order.invoiceIssuedAt ? formatOrderDate(order.invoiceIssuedAt) : 'Sin registrar' }}</dd></div>
+              <div><dt>Entrega registrada</dt><dd>{{ order.deliveredAt ? formatOrderDate(order.deliveredAt) : 'Sin registrar' }}</dd></div>
+              <div><dt>Pedido completado</dt><dd>{{ order.completedAt ? formatOrderDate(order.completedAt) : 'Aún no completado' }}</dd></div>
+            </dl>
+
+            <button class="btn btn-primary fulfillment-save" type="button" (click)="saveOrderFulfillment()"
+              [disabled]="!hasFulfillmentChanges || isUpdatingFulfillment" [attr.aria-busy]="isUpdatingFulfillment">
+              {{ isUpdatingFulfillment ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
           </section>
 
-          <div class="dashboard-loading status-feedback" *ngIf="isUpdatingOrderStatus" role="status" aria-live="polite" aria-busy="true">
-            Actualizando estado del pedido...
+          <div class="dashboard-loading status-feedback" *ngIf="isUpdatingFulfillment" role="status" aria-live="polite" aria-busy="true">
+            Guardando cambios del pedido...
           </div>
-          <p class="order-status-error" *ngIf="orderStatusError" role="alert">{{ orderStatusError }}</p>
-          <p class="order-status-success" *ngIf="orderStatusMessage" role="status" aria-live="polite">{{ orderStatusMessage }}</p>
+          <p class="order-status-error" *ngIf="fulfillmentError" role="alert">{{ fulfillmentError }}</p>
+          <p class="order-status-success" *ngIf="fulfillmentMessage" role="status" aria-live="polite">{{ fulfillmentMessage }}</p>
         </section>
 
         <ng-template #pendingOrdersList>
           <div class="pending-orders-total" *ngIf="pendingOrders.length">
-            <span>Importe total pendiente</span>
+            <span>Importe total de pedidos por gestionar</span>
             <strong>{{ pendingOrdersTotal | currency }}</strong>
           </div>
 
@@ -210,8 +264,8 @@
 
           <ng-template #noPendingOrders>
             <section class="pending-orders-empty" aria-live="polite">
-              <h3>No hay pedidos pendientes de pago</h3>
-              <p>Cuando se registren nuevos pedidos, aparecerán aquí.</p>
+              <h3>No hay pedidos por gestionar</h3>
+              <p>Los nuevos pedidos realizados aparecerán aquí.</p>
             </section>
           </ng-template>
         </ng-template>

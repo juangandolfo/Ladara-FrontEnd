@@ -4,10 +4,20 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { AdminDashboardSummary, AdminOrder, OrderService } from '../../services/order.service';
+import { OrderFulfillmentUpdateDto, OrderPaymentStatus } from '../../services/models/order.model';
 
 interface DashboardMetric {
   label: string;
   value: number;
+}
+
+interface AdminFulfillmentForm {
+  paymentStatus: OrderPaymentStatus;
+  paymentReference: string;
+  invoiceIssued: boolean;
+  invoiceIdentifier: string;
+  isDelivered: boolean;
+  deliveryDocumentIdentifier: string;
 }
 
 @Component({
@@ -27,10 +37,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoadingPendingOrders = false;
   pendingOrdersError: string | null = null;
   selectedPendingOrder: AdminOrder | null = null;
-  selectedOrderStatus = '';
-  isUpdatingOrderStatus = false;
-  orderStatusError: string | null = null;
-  orderStatusMessage: string | null = null;
+  fulfillmentForm: AdminFulfillmentForm | null = null;
+  isUpdatingFulfillment = false;
+  fulfillmentError: string | null = null;
+  fulfillmentMessage: string | null = null;
+  private initialFulfillmentForm: AdminFulfillmentForm | null = null;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -53,8 +64,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.summary) return [];
 
     return [
-      { label: 'Pedidos pendientes de pago', value: this.summary.pendingPaymentCount },
-      { label: 'Pedidos en preparación', value: this.summary.preparingCount },
+      { label: 'Carritos activos', value: this.summary.cartCount },
+      { label: 'Pedidos realizados', value: this.summary.orderPlacedCount },
       { label: 'Pedidos finalizados en los últimos 30 días', value: this.summary.completedLast30DaysCount }
     ];
   }
@@ -71,20 +82,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
           if (
             !response.success ||
             !counts ||
-            !Number.isFinite(counts.pendingPaymentCount) ||
-            !Number.isFinite(counts.preparingCount) ||
+            !Number.isFinite(counts.cartCount) ||
+            !Number.isFinite(counts.orderPlacedCount) ||
             !Number.isFinite(counts.completedLast30DaysCount)
           ) {
             this.summary = null;
-            this.error = response.message || 'La respuesta de indicadores no es válida.';
+            this.error = response.message || 'La respuesta del resumen no contiene los indicadores esperados.';
           } else {
             this.summary = counts;
           }
           this.isLoading = false;
         },
-        error: () => {
+        error: error => {
           this.summary = null;
-          this.error = 'No se pudieron cargar los indicadores de pedidos.';
+          this.error = error?.error?.message || 'No se pudieron cargar los indicadores de pedidos.';
           this.isLoading = false;
         }
       });
@@ -99,6 +110,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (dialog && !dialog.open) dialog.showModal();
 
     this.selectedPendingOrder = null;
+    this.fulfillmentForm = null;
+    this.initialFulfillmentForm = null;
     this.pendingOrders = [];
     this.isLoadingPendingOrders = true;
     this.pendingOrdersError = null;
@@ -110,13 +123,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.pendingOrders = [];
             this.pendingOrdersError = response.message || 'La respuesta de pedidos no es válida.';
           } else {
-            this.pendingOrders = response.data.filter(order => this.isPaymentPending(order.status));
+            this.pendingOrders = response.data.filter(order =>
+              this.isOrderPlaced(order.status)
+            );
           }
           this.isLoadingPendingOrders = false;
         },
         error: () => {
           this.pendingOrders = [];
-          this.pendingOrdersError = 'No se pudieron cargar los pedidos pendientes de pago.';
+          this.pendingOrdersError = 'No se pudieron cargar los pedidos realizados.';
           this.isLoadingPendingOrders = false;
         }
       });
@@ -126,9 +141,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const dialog = this.pendingOrdersDialog?.nativeElement;
     if (dialog?.open) dialog.close();
     this.selectedPendingOrder = null;
-    this.selectedOrderStatus = '';
-    this.orderStatusError = null;
-    this.orderStatusMessage = null;
+    this.fulfillmentForm = null;
+    this.initialFulfillmentForm = null;
+    this.fulfillmentError = null;
+    this.fulfillmentMessage = null;
   }
 
   onPendingOrdersBackdropClick(event: MouseEvent): void {
@@ -141,65 +157,141 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   openPendingOrderDetail(order: AdminOrder): void {
     this.selectedPendingOrder = order;
-    this.selectedOrderStatus = order.status;
-    this.orderStatusError = null;
-    this.orderStatusMessage = null;
+    this.fulfillmentForm = this.createFulfillmentForm(order);
+    this.initialFulfillmentForm = { ...this.fulfillmentForm };
+    this.fulfillmentError = null;
+    this.fulfillmentMessage = null;
   }
 
   backToPendingOrders(): void {
     this.selectedPendingOrder = null;
-    this.selectedOrderStatus = '';
-    this.orderStatusError = null;
-    this.orderStatusMessage = null;
+    this.fulfillmentForm = null;
+    this.initialFulfillmentForm = null;
+    this.fulfillmentError = null;
+    this.fulfillmentMessage = null;
   }
 
-  changeOrderStatus(event: Event): void {
+  setPaymentStatus(event: Event): void {
+    if (this.fulfillmentForm) {
+      this.fulfillmentForm.paymentStatus = (event.target as HTMLSelectElement).value as OrderPaymentStatus;
+    }
+  }
+
+  setPaymentReference(event: Event): void {
+    if (this.fulfillmentForm) this.fulfillmentForm.paymentReference = (event.target as HTMLInputElement).value;
+  }
+
+  setInvoiceIssued(event: Event): void {
+    if (!this.fulfillmentForm) return;
+    this.fulfillmentForm.invoiceIssued = (event.target as HTMLInputElement).checked;
+    if (!this.fulfillmentForm.invoiceIssued) this.fulfillmentForm.invoiceIdentifier = '';
+  }
+
+  setInvoiceIdentifier(event: Event): void {
+    if (!this.fulfillmentForm) return;
+    this.fulfillmentForm.invoiceIdentifier = (event.target as HTMLInputElement).value;
+    if (this.fulfillmentForm.invoiceIdentifier.trim()) this.fulfillmentForm.invoiceIssued = true;
+  }
+
+  setDelivered(event: Event): void {
+    if (this.fulfillmentForm) this.fulfillmentForm.isDelivered = (event.target as HTMLInputElement).checked;
+  }
+
+  setDeliveryDocumentIdentifier(event: Event): void {
+    if (this.fulfillmentForm) {
+      this.fulfillmentForm.deliveryDocumentIdentifier = (event.target as HTMLInputElement).value;
+    }
+  }
+
+  get hasFulfillmentChanges(): boolean {
+    const form = this.fulfillmentForm;
+    const initial = this.initialFulfillmentForm;
+    if (!form || !initial) return false;
+    return form.paymentStatus !== initial.paymentStatus ||
+      form.paymentReference.trim() !== initial.paymentReference.trim() ||
+      form.invoiceIssued !== initial.invoiceIssued ||
+      form.invoiceIdentifier.trim() !== initial.invoiceIdentifier.trim() ||
+      form.isDelivered !== initial.isDelivered ||
+      form.deliveryDocumentIdentifier.trim() !== initial.deliveryDocumentIdentifier.trim();
+  }
+
+  saveOrderFulfillment(): void {
     const order = this.selectedPendingOrder;
-    const nextStatus = (event.target as HTMLSelectElement).value;
-    if (!order || nextStatus !== 'completed' || this.isUpdatingOrderStatus) {
-      this.selectedOrderStatus = order?.status || '';
-      return;
+    const form = this.fulfillmentForm;
+    const initial = this.initialFulfillmentForm;
+    if (!order || !form || !initial || !this.hasFulfillmentChanges || this.isUpdatingFulfillment) return;
+
+    const update: OrderFulfillmentUpdateDto = {};
+    if (form.paymentStatus !== initial.paymentStatus) update.paymentStatus = form.paymentStatus;
+    if (form.paymentReference.trim() !== initial.paymentReference.trim()) {
+      update.paymentReference = form.paymentReference.trim() || null;
+    }
+    if (form.invoiceIssued !== initial.invoiceIssued) update.invoiceIssued = form.invoiceIssued;
+    if (form.invoiceIdentifier.trim() !== initial.invoiceIdentifier.trim()) {
+      update.invoiceIdentifier = form.invoiceIdentifier.trim() || null;
+    }
+    if (form.isDelivered !== initial.isDelivered) update.isDelivered = form.isDelivered;
+    if (form.deliveryDocumentIdentifier.trim() !== initial.deliveryDocumentIdentifier.trim()) {
+      update.deliveryDocumentIdentifier = form.deliveryDocumentIdentifier.trim() || null;
     }
 
-    this.selectedOrderStatus = nextStatus;
-    this.isUpdatingOrderStatus = true;
-    this.orderStatusError = null;
-    this.orderStatusMessage = null;
+    if (!Object.keys(update).length) return;
+    this.isUpdatingFulfillment = true;
+    this.fulfillmentError = null;
+    this.fulfillmentMessage = null;
 
-    this.orderService.completeOrder(order.id)
+    this.orderService.updateOrderFulfillment(order.id, update)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: response => {
-          if (!response.success) {
-            this.selectedOrderStatus = order.status;
-            this.orderStatusError = response.message || 'No se pudo actualizar el estado del pedido.';
+          if (!response.success || !response.data) {
+            this.fulfillmentError = response.message || 'El servidor no devolvió el pedido actualizado.';
           } else {
-            order.status = response.data?.status || 'completed';
-            this.selectedOrderStatus = order.status;
-            this.pendingOrders = this.pendingOrders.filter(pendingOrder => pendingOrder.id !== order.id);
-            this.orderStatusMessage = 'El pedido se marcó como completado.';
+            Object.assign(order, response.data);
+            this.fulfillmentForm = this.createFulfillmentForm(order);
+            this.initialFulfillmentForm = { ...this.fulfillmentForm };
+            if (order.paymentStatus === 'paid') {
+              this.pendingOrders = this.pendingOrders.filter(pendingOrder => pendingOrder.id !== order.id);
+            }
+            this.fulfillmentMessage = 'Se actualizaron los datos de pago, facturación o entrega.';
             this.loadSummary();
           }
-          this.isUpdatingOrderStatus = false;
+          this.isUpdatingFulfillment = false;
         },
-        error: () => {
-          this.selectedOrderStatus = order.status;
-          this.orderStatusError = 'No se pudo actualizar el estado del pedido. Inténtalo nuevamente.';
-          this.isUpdatingOrderStatus = false;
+        error: error => {
+          this.fulfillmentError = error?.status === 409
+            ? error?.error?.message || 'El pedido cambió en el servidor. Actualiza los datos e inténtalo nuevamente.'
+            : error?.error?.message || 'No se pudo actualizar el pedido. Inténtalo nuevamente.';
+          this.isUpdatingFulfillment = false;
         }
       });
   }
 
-  getOrderStatusLabel(status: string): string {
+  getPaymentMethodLabel(method?: string | null): string {
+    return method === 'bank_transfer' ? 'Transferencia bancaria' : method === 'cash' ? 'Efectivo' : 'No registrado';
+  }
+
+  getWorkflowStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      pending: 'Pendiente de pago',
+      cart: 'En carrito',
+      order_placed: 'Pedido realizado',
       pending_payment: 'Pendiente de pago',
-      awaiting_payment: 'Pendiente de pago',
-      waiting_for_payment: 'Pendiente de pago',
       preparing: 'En preparación',
+      delivery: 'En entrega',
       completed: 'Completado'
     };
     return labels[status] || status;
+  }
+
+  private createFulfillmentForm(order: AdminOrder): AdminFulfillmentForm {
+    return {
+      paymentStatus: order.paymentStatus || 'unpaid',
+      paymentReference: order.paymentReference || '',
+      invoiceIssued: Boolean(order.invoiceIssuedAt || order.invoiceIdentifier),
+      invoiceIdentifier: order.invoiceIdentifier || '',
+      isDelivered: Boolean(order.isDelivered),
+      deliveryDocumentIdentifier: order.deliveryDocumentIdentifier || ''
+    };
   }
 
   getOrderItemTotal(item: NonNullable<AdminOrder['items']>[number]): number {
@@ -219,9 +311,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ].filter(value => Boolean(value?.trim())).join(', ') || 'No registrada';
   }
 
-  isPaymentPending(status: string): boolean {
-    const normalizedStatus = String(status).trim().toLowerCase().replace(/[\s-]+/g, '_');
-    return ['pending', 'pending_payment', 'awaiting_payment', 'waiting_for_payment'].includes(normalizedStatus);
+  isOrderPlaced(status: string): boolean {
+    return String(status).trim().toLowerCase().replace(/[\s-]+/g, '_') === 'order_placed';
   }
 
   get pendingOrdersTotal(): number {

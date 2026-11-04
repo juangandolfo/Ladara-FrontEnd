@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {Observable, retry, throwError, timer} from 'rxjs';
+import {CheckoutOrderDto, OrderDto, OrderFulfillmentUpdateDto, OrderPaymentMethod, OrderPaymentStatus} from './models/order.model';
 
 export interface AddItemToOrderDto {
   productId: number;
@@ -37,30 +38,17 @@ export interface OrderValidationResponse {
   };
 }
 
-export interface CheckoutRequest {
-  billingAddress: {
-    fullName: string;
-    company?: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state?: string;
-    postalCode: string;
-    country: string;
-    phone?: string;
-  };
-  paymentMethod: string;
-}
+export type CheckoutRequest = CheckoutOrderDto;
 
 export interface CheckoutResponse {
   success: boolean;
   message?: string;
-  data?: unknown;
+  data?: OrderDto;
 }
 
 export interface AdminDashboardSummary {
-  pendingPaymentCount: number;
-  preparingCount: number;
+  cartCount: number;
+  orderPlacedCount: number;
   completedLast30DaysCount: number;
 }
 
@@ -75,7 +63,16 @@ export interface AdminOrder {
   status: string;
   total: number | string;
   createdAt: string;
-  paymentMethod?: string;
+  paymentMethod?: OrderPaymentMethod | null;
+  paymentStatus: OrderPaymentStatus;
+  paymentReference: string | null;
+  paidAt: string | null;
+  invoiceIdentifier: string | null;
+  invoiceIssuedAt: string | null;
+  isDelivered: boolean;
+  deliveredAt: string | null;
+  deliveryDocumentIdentifier: string | null;
+  completedAt: string | null;
   billingAddress?: {
     fullName?: string;
     company?: string;
@@ -104,7 +101,7 @@ export interface AdminOrderItem {
   };
 }
 
-export interface CompleteOrderResponse {
+export interface OrderFulfillmentResponse {
   success: boolean;
   message?: string;
   data?: AdminOrder;
@@ -183,8 +180,8 @@ export class OrderService {
     });
   }
 
-  completeOrder(orderId: number): Observable<CompleteOrderResponse> {
-    return this.http.post<CompleteOrderResponse>(`${this.baseUrl}/${orderId}/complete`, {}, {
+  updateOrderFulfillment(orderId: number, update: OrderFulfillmentUpdateDto): Observable<OrderFulfillmentResponse> {
+    return this.http.patch<OrderFulfillmentResponse>(`${this.baseUrl}/${orderId}/fulfillment`, update, {
       headers: this.getAuthHeaders()
     });
   }

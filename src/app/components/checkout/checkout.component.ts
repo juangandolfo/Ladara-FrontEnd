@@ -5,6 +5,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
 import { CheckoutRequest, OrderService } from '../../services/order.service';
+import { OrderPaymentMethod } from '../../services/models/order.model';
 import { FormsModule } from '@angular/forms'; 
 import { AuthService } from '../../services/auth.service';
 import { ProductService } from '../../services/product.service';
@@ -13,7 +14,6 @@ import { DialogService } from '../../services/dialog.service';
 const TAX_RATE = 0.08;
 const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
 const ALL_CATEGORIES = 'Todas';
-const PENDING_PAYMENT_METHOD = 'pending';
 
 export interface BillingFormData {
   firstName: string;
@@ -101,6 +101,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     email: '',
     newsletter: false
   };
+
+  paymentMethod: OrderPaymentMethod = 'bank_transfer';
 
   private orderId: number | null = null;
   private readonly destroy$ = new Subject<void>();
@@ -221,7 +223,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
             country: this.formData.country.trim(),
             ...(this.formData.phone?.trim() ? { phone: this.formData.phone.trim() } : {})
           },
-          paymentMethod: PENDING_PAYMENT_METHOD
+          paymentMethod: this.paymentMethod
         };
 
         this.orderService.initiateCheckout(this.orderId!, checkout)

@@ -64,7 +64,7 @@ describe('OrderService', () => {
     expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
     request.flush({
       success: true,
-      data: { pendingPaymentCount: 3, preparingCount: 1, completedLast30DaysCount: 12 }
+      data: { cartCount: 3, orderPlacedCount: 1, completedLast30DaysCount: 12 }
     });
   });
 
@@ -76,13 +76,14 @@ describe('OrderService', () => {
     request.flush({ success: true, data: [] });
   });
 
-  it('marks an order as completed through the admin completion endpoint', () => {
-    service.completeOrder(42).subscribe();
-    const request = httpTesting.expectOne('http://localhost:3000/api/orders/42/complete');
-    expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({});
+  it('updates only supplied fulfillment fields through the admin patch endpoint', () => {
+    const update = { paymentStatus: 'paid' as const, paymentReference: null, isDelivered: true };
+    service.updateOrderFulfillment(42, update).subscribe();
+    const request = httpTesting.expectOne('http://localhost:3000/api/orders/42/fulfillment');
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual(update);
     expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
-    request.flush({ success: true, data: { id: 42, status: 'completed', total: 80, createdAt: '2026-01-01' } });
+    request.flush({ success: true, data: { id: 42, status: 'preparing', total: 80, createdAt: '2026-01-01' } });
   });
 
   it('validates a coupon code against the coupon endpoint', () => {
@@ -112,7 +113,7 @@ describe('OrderService', () => {
         postalCode: '11000',
         country: 'UY'
       },
-      paymentMethod: 'pending'
+      paymentMethod: 'bank_transfer' as const
     };
 
     service.initiateCheckout(8, checkout).subscribe();

@@ -309,19 +309,45 @@
   white-space: nowrap;
 }
 
-.order-status-section {
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
-  align-items: center;
+.fulfillment-section {
   padding-top: var(--spacing-md);
   border-top: 1px solid var(--color-secondary-border);
 }
 
-.status-control-copy p,
+.fulfillment-help,
 .order-items-empty {
   color: var(--color-secondary-dark);
 }
 
-.order-status-select {
+.fulfillment-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.fulfillment-group {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-secondary-border);
+  border-radius: var(--radius-md);
+}
+
+.fulfillment-group legend {
+  padding: 0 var(--spacing-xs);
+  color: var(--color-primary-violet);
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.fulfillment-group > label:not(.fulfillment-checkbox) {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.fulfillment-control {
   width: 100%;
   min-height: 44px;
   padding: var(--spacing-sm) var(--spacing-md);
@@ -332,9 +358,45 @@
   font: inherit;
 }
 
-.order-status-select:disabled {
+.fulfillment-control:disabled {
   background: var(--color-secondary-light);
   cursor: not-allowed;
+}
+
+.fulfillment-checkbox {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fulfillment-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary-violet);
+}
+
+.fulfillment-timestamps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.fulfillment-timestamps > div {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.fulfillment-timestamps dt {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.fulfillment-save {
+  justify-self: start;
+  min-height: 44px;
 }
 
 .status-feedback {
@@ -406,11 +468,11 @@
     grid-template-columns: 1fr;
   }
 
-  .order-status-section {
+  .fulfillment-fields {
     grid-template-columns: 1fr;
   }
 
-  .order-status-select {
-    max-width: none;
+  .fulfillment-timestamps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

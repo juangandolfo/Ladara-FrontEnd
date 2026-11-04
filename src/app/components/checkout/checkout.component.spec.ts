@@ -99,6 +99,7 @@ describe('CheckoutComponent', () => {
       firstName: 'Ada', lastName: 'Lovelace', streetAddress: '1 Example Street',
       company: 'Analytical Engines', townCity: 'Montevideo', postcode: '11000', country: 'UY'
     });
+    component.paymentMethod = 'cash';
     component.cartItems.set([
       { id: 99, itemId: 99, name: 'Soap', price: 10, quantity: 1, category: 'Health' }
     ]);
@@ -115,7 +116,7 @@ describe('CheckoutComponent', () => {
         postalCode: '11000',
         country: 'UY'
       },
-      paymentMethod: 'pending'
+      paymentMethod: 'cash'
     });
     expect(alert).toHaveBeenCalledWith('Pedido enviado. El pago aún está pendiente.', 'Pedido iniciado', 'success');
     expect(component.isLoading()).toBeFalse();
