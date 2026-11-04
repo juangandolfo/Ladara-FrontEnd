@@ -17,214 +17,134 @@
 
   <!-- Main Grid Content -->
   <div class="cart-content">
-    
-    <!-- Left Column: Form -->
-    <div class="billing-section">
-      <form (ngSubmit)="onPlaceOrder()" #checkoutForm="ngForm" class="checkout-form" novalidate>
-        <div class="form-row duo">
-          <div class="form-group form-floating">
-            <input 
-              type="text" 
-              id="firstName" 
-              name="firstName" 
-              [(ngModel)]="formData.firstName" 
-              #firstName="ngModel"
-              [class.is-invalid]="firstName.invalid && (firstName.dirty || firstName.touched || checkoutForm.submitted)"
-              [class.is-valid]="firstName.valid && (firstName.dirty || firstName.touched)"
-              placeholder=" " 
-              required>
-            <label for="firstName">Nombre *</label>
-            <div class="invalid-feedback">Por favor ingrese su nombre.</div>
-          </div>
-
-          <div class="form-group form-floating">
-            <input 
-              type="text" 
-              id="lastName" 
-              name="lastName" 
-              [(ngModel)]="formData.lastName" 
-              #lastName="ngModel"
-              [class.is-invalid]="lastName.invalid && (lastName.dirty || lastName.touched || checkoutForm.submitted)"
-              [class.is-valid]="lastName.valid && (lastName.dirty || lastName.touched)"
-              placeholder=" " 
-              required>
-            <label for="lastName">Apellido *</label>
-            <div class="invalid-feedback">Por favor ingrese su apellido.</div>
-          </div>
+    <section class="billing-section" aria-labelledby="billing-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="billing-title">Dirección de facturación</h2>
+          <p>Selecciona una dirección guardada o agrega una nueva.</p>
         </div>
+        <button type="button" class="btn btn-secondary" (click)="openNewAddressForm()"
+          [disabled]="isSavingAddress()">Agregar dirección</button>
+      </div>
 
-        <div class="form-group form-floating">
-          <input 
-            type="text" 
-            id="company" 
-            name="company" 
-            [(ngModel)]="formData.company" 
-            maxlength="120"
-            placeholder=" ">
-          <label for="company">Empresa (opcional)</label>
-        </div>
+      <p *ngIf="isLoadingAddresses()" class="address-status" role="status" aria-live="polite">
+        Cargando tus direcciones…
+      </p>
+      <div *ngIf="addressError()" class="address-error" role="alert">
+        <span>{{ addressError() }}</span>
+        <button type="button" class="btn btn-secondary" (click)="reloadBillingAddresses()"
+          [disabled]="isLoadingAddresses()">Recargar direcciones</button>
+      </div>
 
-        <div class="form-row duo">
-          <div class="form-group form-floating">
-            <select 
-              id="country" 
-              name="country" 
-              [(ngModel)]="formData.country" 
-              #country="ngModel"
-              [class.is-invalid]="country.invalid && (country.dirty || country.touched || checkoutForm.submitted)"
-              [class.is-valid]="country.valid && (country.dirty || country.touched)"
-              required>
-              <option value="UY">Uruguay</option>
-            </select>
-            <label for="country">País / Región *</label>
-            <div class="invalid-feedback">Por favor seleccione un país.</div>
-          </div>
-
-          <div class="form-group form-floating">
-            <select 
-              id="state" 
-              name="state" 
-              [(ngModel)]="formData.state" 
-              #state="ngModel"
-              [class.is-invalid]="state.invalid && (state.dirty || state.touched || checkoutForm.submitted)"
-              [class.is-valid]="state.valid && (state.dirty || state.touched)"
-              required>
-              <option value="Montevideo">Montevideo</option>
-              <option value="Artigas">Artigas</option>
-              <option value="Canelones">Canelones</option>
-              <option value="Cerro Largo">Cerro Largo</option>
-              <option value="Colonia">Colonia</option>
-              <option value="Durazno">Durazno</option>
-              <option value="Flores">Flores</option>
-              <option value="Florida">Florida</option>
-              <option value="Lavalleja">Lavalleja</option>
-              <option value="Maldonado">Maldonado</option>
-              <option value="Paysandú">Paysandú</option>
-              <option value="Río Negro">Río Negro</option>
-              <option value="Rivera">Rivera</option>
-              <option value="Rocha">Rocha</option>
-              <option value="Salto">Salto</option>
-              <option value="San José">San José</option>
-              <option value="Soriano">Soriano</option>
-              <option value="Tacuarembó">Tacuarembó</option>
-              <option value="Treinta y Tres">Treinta y Tres</option>
-            </select>
-            <label for="state">Departamento *</label>
-            <div class="invalid-feedback">Por favor seleccione un departamento.</div>
-          </div>
-        </div>
-
-        <div class="form-group form-floating">
-          <input 
-            type="text" 
-            id="streetAddress" 
-            name="streetAddress" 
-            [(ngModel)]="formData.streetAddress" 
-            #streetAddress="ngModel"
-            [class.is-invalid]="streetAddress.invalid && (streetAddress.dirty || streetAddress.touched || checkoutForm.submitted)"
-            [class.is-valid]="streetAddress.valid && (streetAddress.dirty || streetAddress.touched)"
-            placeholder=" " 
-            required>
-          <label for="streetAddress">Dirección (Calle y número) *</label>
-          <div class="invalid-feedback">Por favor ingrese su dirección.</div>
-        </div>
-
-        <div class="form-group form-floating">
-          <input 
-            type="text" 
-            id="streetAddress2" 
-            name="streetAddress2" 
-            [(ngModel)]="formData.streetAddress2" 
-            placeholder=" ">
-          <label for="streetAddress2">Apartamento, suite, etc. (opcional)</label>
-        </div>
-
-        <div class="form-row duo">
-          <div class="form-group form-floating">
-            <input 
-              type="text" 
-              id="townCity" 
-              name="townCity" 
-              [(ngModel)]="formData.townCity" 
-              #townCity="ngModel"
-              [class.is-invalid]="townCity.invalid && (townCity.dirty || townCity.touched || checkoutForm.submitted)"
-              [class.is-valid]="townCity.valid && (townCity.dirty || townCity.touched)"
-              placeholder=" " 
-              required>
-            <label for="townCity">Ciudad *</label>
-            <div class="invalid-feedback">Por favor ingrese la ciudad.</div>
-          </div>
-
-          <div class="form-group form-floating">
-            <input 
-              type="text" 
-              id="postcode" 
-              name="postcode" 
-              [(ngModel)]="formData.postcode" 
-              #postcode="ngModel"
-              [class.is-invalid]="postcode.invalid && (postcode.dirty || postcode.touched || checkoutForm.submitted)"
-              [class.is-valid]="postcode.valid && (postcode.dirty || postcode.touched)"
-              placeholder=" " 
-              required>
-            <label for="postcode">Código Postal *</label>
-            <div class="invalid-feedback">Por favor ingrese el código postal.</div>
-          </div>
-        </div>
-
-        <div class="form-group form-floating">
-          <input 
-            type="tel" 
-            id="phone" 
-            name="phone" 
-            [(ngModel)]="formData.phone" 
-            #phone="ngModel"
-            [class.is-invalid]="phone.invalid && (phone.dirty || phone.touched || checkoutForm.submitted)"
-            [class.is-valid]="phone.valid && (phone.dirty || phone.touched)"
-            placeholder=" " 
-            required>
-          <label for="phone">Teléfono *</label>
-          <div class="invalid-feedback">Por favor ingrese un número de teléfono válido.</div>
-        </div>
-
-        <fieldset class="payment-method-group" aria-describedby="payment-method-help">
-          <legend>Método de pago *</legend>
-          <label class="payment-method-option" for="payment-bank-transfer">
-            <input id="payment-bank-transfer" type="radio" name="paymentMethod"
-              [(ngModel)]="paymentMethod" value="bank_transfer" required>
-            Transferencia bancaria
+      <div *ngIf="!isLoadingAddresses() && billingAddresses().length" class="address-list"
+        role="radiogroup" aria-label="Direcciones de facturación guardadas">
+        <article class="address-option" *ngFor="let address of billingAddresses()"
+          [class.selected]="selectedBillingInformationId() === address.id">
+          <label class="address-select-label">
+            <input type="radio" name="billingInformationId" [checked]="selectedBillingInformationId() === address.id"
+              [attr.aria-label]="'Seleccionar dirección de ' + address.fullName"
+              (change)="selectedBillingInformationId.set(address.id)">
+            <span class="address-details">
+              <strong>{{ address.fullName }}</strong>
+              <span *ngIf="address.company">{{ address.company }}</span>
+              <span>{{ address.addressLine1 }}<ng-container *ngIf="address.addressLine2">, {{ address.addressLine2 }}</ng-container></span>
+              <span>{{ address.city }}<ng-container *ngIf="address.state">, {{ address.state }}</ng-container>, {{ address.postalCode }}</span>
+              <span>{{ address.country }}<ng-container *ngIf="address.phone"> · {{ address.phone }}</ng-container></span>
+            </span>
           </label>
-          <label class="payment-method-option" for="payment-cash">
-            <input id="payment-cash" type="radio" name="paymentMethod"
-              [(ngModel)]="paymentMethod" value="cash" required>
-            Efectivo
-          </label>
-          <p id="payment-method-help">El pedido registrará tu elección; el pago no se procesa en este paso.</p>
-        </fieldset>
+          <div class="address-actions" aria-label="Acciones de dirección">
+            <button type="button" class="btn btn-ghost" (click)="editAddress(address)"
+              [attr.aria-label]="'Editar dirección de ' + address.fullName">Editar</button>
+            <button type="button" class="btn btn-ghost danger-action" (click)="deleteAddress(address)"
+              [attr.aria-label]="'Eliminar dirección de ' + address.fullName">Eliminar</button>
+          </div>
+        </article>
+      </div>
 
-        <div class="form-group form-floating">
-          <input 
-            type="email" 
-            id="email" 
-            name="email" 
-            [(ngModel)]="formData.email" 
-            #email="ngModel"
-            [class.is-invalid]="email.invalid && (email.dirty || email.touched || checkoutForm.submitted)"
-            [class.is-valid]="email.valid && (email.dirty || email.touched)"
-            placeholder=" " 
-            email
-            required>
-          <label for="email">Correo Electrónico *</label>
-          <div class="invalid-feedback">Por favor ingrese un correo electrónico válido.</div>
+      <p *ngIf="!isLoadingAddresses() && !billingAddresses().length && !addressError()" class="empty-addresses">
+        Aún no tienes direcciones guardadas. Agrega una para continuar con tu pedido.
+      </p>
+
+      <aside class="address-history-note">
+        Si editas una dirección guardada, el cambio también aparecerá en los pedidos vinculados. Las direcciones usadas por pedidos no se pueden eliminar.
+      </aside>
+
+      <form *ngIf="isAddressFormVisible()" (ngSubmit)="saveAddress()" #savedAddressForm="ngForm"
+        class="address-form" novalidate>
+        <h3>{{ editingAddressId() ? 'Editar dirección' : 'Nueva dirección' }}</h3>
+        <div class="address-form-grid">
+          <label class="address-field field-wide" for="billing-full-name">
+            Nombre completo <span aria-hidden="true">*</span>
+            <input id="billing-full-name" name="fullName" type="text" autocomplete="name"
+              [(ngModel)]="addressForm.fullName" required maxlength="160">
+          </label>
+          <label class="address-field field-wide" for="billing-company">
+            Empresa <span class="optional-label">(opcional)</span>
+            <input id="billing-company" name="company" type="text" autocomplete="organization"
+              [(ngModel)]="addressForm.company" maxlength="160">
+          </label>
+          <label class="address-field field-wide" for="billing-address-line-1">
+            Dirección <span aria-hidden="true">*</span>
+            <input id="billing-address-line-1" name="addressLine1" type="text" autocomplete="address-line1"
+              [(ngModel)]="addressForm.addressLine1" required maxlength="200">
+          </label>
+          <label class="address-field field-wide" for="billing-address-line-2">
+            Apartamento, suite, etc. <span class="optional-label">(opcional)</span>
+            <input id="billing-address-line-2" name="addressLine2" type="text" autocomplete="address-line2"
+              [(ngModel)]="addressForm.addressLine2" maxlength="200">
+          </label>
+          <label class="address-field" for="billing-city">
+            Ciudad <span aria-hidden="true">*</span>
+            <input id="billing-city" name="city" type="text" autocomplete="address-level2"
+              [(ngModel)]="addressForm.city" required maxlength="120">
+          </label>
+          <label class="address-field" for="billing-state">
+            Departamento / Estado <span class="optional-label">(opcional)</span>
+            <input id="billing-state" name="state" type="text" autocomplete="address-level1"
+              [(ngModel)]="addressForm.state" maxlength="120">
+          </label>
+          <label class="address-field" for="billing-postal-code">
+            Código postal <span aria-hidden="true">*</span>
+            <input id="billing-postal-code" name="postalCode" type="text" autocomplete="postal-code"
+              [(ngModel)]="addressForm.postalCode" required maxlength="40">
+          </label>
+          <label class="address-field" for="billing-country">
+            País <span aria-hidden="true">*</span>
+            <input id="billing-country" name="country" type="text" autocomplete="country"
+              [(ngModel)]="addressForm.country" required maxlength="80">
+          </label>
+          <label class="address-field field-wide" for="billing-phone">
+            Teléfono <span class="optional-label">(opcional)</span>
+            <input id="billing-phone" name="phone" type="tel" autocomplete="tel"
+              [(ngModel)]="addressForm.phone" maxlength="40">
+          </label>
         </div>
-
-        <div class="form-group checkbox-group">
-          <label>
-            <input type="checkbox" name="newsletter" [(ngModel)]="formData.newsletter">
-            Deseo recibir actualizaciones y novedades por correo electrónico
-          </label>
+        <div class="address-form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="savedAddressForm.invalid || isSavingAddress()"
+            [attr.aria-busy]="isSavingAddress()">
+            {{ isSavingAddress() ? 'Guardando…' : 'Guardar dirección' }}
+          </button>
+          <button type="button" class="btn btn-ghost" (click)="cancelAddressForm()" [disabled]="isSavingAddress()">
+            Cancelar
+          </button>
         </div>
       </form>
-    </div>
+
+      <fieldset class="payment-method-group" aria-describedby="payment-method-help">
+        <legend>Método de pago</legend>
+        <label class="payment-method-option" for="payment-bank-transfer">
+          <input id="payment-bank-transfer" type="radio" name="paymentMethod"
+            [(ngModel)]="paymentMethod" value="bank_transfer">
+          Transferencia bancaria
+        </label>
+        <label class="payment-method-option" for="payment-cash">
+          <input id="payment-cash" type="radio" name="paymentMethod"
+            [(ngModel)]="paymentMethod" value="cash">
+          Efectivo
+        </label>
+        <p id="payment-method-help">El pedido registrará tu elección; el pago no se procesa en este paso.</p>
+      </fieldset>
+    </section>
 
     <!-- Right Column: Summary Sidebar -->
     <div class="summary-card">
@@ -259,7 +179,7 @@
 
       <div class="summary-row coupon-row" *ngIf="orderSummary().discount > 0">
         <span>Cupón: {{ orderSummary().couponCode }}</span>
-        <span class="coupon-val">-{{ orderSummary().discount | currency }} <a href="javascript:void(0)" (click)="onRemoveCoupon()">(Quitar)</a></span>
+          <span class="coupon-val">-{{ orderSummary().discount | currency }} <button type="button" (click)="onRemoveCoupon()">(Quitar)</button></span>
       </div>
 
       <div class="summary-row">
@@ -275,12 +195,14 @@
       </div>
 
       <div class="checkout-actions">
-        <button type="button" class="btn btn-primary checkout-btn" (click)="onPlaceOrder()" [disabled]="isLoading() || orderSummary().items.length === 0" [attr.aria-busy]="isLoading()">
+        <button type="button" class="btn btn-primary checkout-btn" (click)="onPlaceOrder()"
+          [disabled]="isLoading() || isLoadingAddresses() || !selectedBillingInformationId() || orderSummary().items.length === 0"
+          [attr.aria-busy]="isLoading()">
           Realizar Pedido
         </button>
         
         <p class="coupon-action-text">
-          ¿Tienes un cupón? <a href="javascript:void(0)" (click)="onCouponClick()">Ingresa tu código aquí</a>
+          ¿Tienes un cupón? <button type="button" (click)="onCouponClick()">Ingresa tu código aquí</button>
         </p>
       </div>
     </div>

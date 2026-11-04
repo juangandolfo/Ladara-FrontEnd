@@ -2,35 +2,14 @@ import { Component, computed, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { EMPTY } from 'rxjs';
 import { CheckoutRequest, OrderService } from '../../services/order.service';
 import { OrderPaymentMethod } from '../../services/models/order.model';
-import { FormsModule } from '@angular/forms'; 
-import { AuthService } from '../../services/auth.service';
-import { ProductService } from '../../services/product.service';
+import { FormsModule } from '@angular/forms';
 import { DialogService } from '../../services/dialog.service';
+import { BillingInformationService } from '../../services/billing-information.service';
+import { BillingInformation, BillingInformationInput } from '../../services/models/billing-information.model';
 
 const TAX_RATE = 0.08;
-const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
-const ALL_CATEGORIES = 'Todas';
-
-export interface BillingFormData {
-  firstName: string;
-  lastName: string;
-  company?: string;
-  country: string;
-  streetAddress: string;
-  streetAddress2?: string;
-  townCity: string;
-  stateCounty: string;
-  state: string;
-  postcode: string;
-  phone: string;
-  email: string;
-  newsletter: boolean;
-}
-
 export interface CartItem {
   id: number;
   name: string;
@@ -63,12 +42,6 @@ export interface OrderSummary {
   total: number;
 }
 
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
 @Component({
   selector: 'app-checkout',
   standalone: true,
@@ -83,24 +56,15 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly rejectedItemIds = signal<number[]>([]);
   readonly activeCoupon = signal<string>('DISCOUNT10'); // Managed via signal for dynamic reactivity
-  readonly isLoggedIn = signal<boolean>(true); 
-  readonly categories = signal<string[]>([]);
+  readonly billingAddresses = signal<BillingInformation[]>([]);
+  readonly selectedBillingInformationId = signal<number | null>(null);
+  readonly isLoadingAddresses = signal(false);
+  readonly isSavingAddress = signal(false);
+  readonly addressError = signal<string | null>(null);
+  readonly isAddressFormVisible = signal(false);
+  readonly editingAddressId = signal<number | null>(null);
 
-  formData: BillingFormData = {
-    firstName: '',
-    lastName: '',
-    company: '',
-    country: 'UY',
-    streetAddress: '',
-    streetAddress2: '',
-    townCity: '',
-    stateCounty: '',
-    state: 'Montevideo',
-    postcode: '',
-    phone: '',
-    email: '',
-    newsletter: false
-  };
+  addressForm: BillingInformationInput = this.createEmptyAddress();
 
   paymentMethod: OrderPaymentMethod = 'bank_transfer';
 
@@ -145,16 +109,13 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   constructor(
     private readonly router: Router,
     private readonly orderService: OrderService,
-    private readonly authService: AuthService,
-    private readonly productService: ProductService,
     private readonly dialogService: DialogService,
-
+    private readonly billingInformationService: BillingInformationService
   ) {}
 
-  async ngOnInit(): Promise<void> {
-    this.updateLoginState();
-    this.setupAuthStateListener();
+  ngOnInit(): void {
     this.loadCurrentOrder();
+    this.loadBillingAddresses();
   }
 
   ngOnDestroy(): void {
@@ -177,6 +138,106 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     this.activeCoupon.set('');
   }
 
+  openNewAddressForm(): void {
+    this.addressForm = this.createEmptyAddress();
+    this.editingAddressId.set(null);
+    this.isAddressFormVisible.set(true);
+    this.addressError.set(null);
+  }
+
+  editAddress(address: BillingInformation): void {
+    this.addressForm = {
+      fullName: address.fullName,
+      company: address.company ?? '',
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2 ?? '',
+      city: address.city,
+      state: address.state ?? '',
+      postalCode: address.postalCode,
+      country: address.country,
+      phone: address.phone ?? ''
+    };
+    this.editingAddressId.set(address.id);
+    this.isAddressFormVisible.set(true);
+    this.addressError.set(null);
+  }
+
+  cancelAddressForm(): void {
+    this.isAddressFormVisible.set(false);
+    this.editingAddressId.set(null);
+    this.addressForm = this.createEmptyAddress();
+    this.addressError.set(null);
+  }
+
+  reloadBillingAddresses(): void {
+    this.loadBillingAddresses();
+  }
+
+  saveAddress(): void {
+    if (this.isSavingAddress()) return;
+    const input = this.normalizedAddressInput();
+    if (!input.fullName || !input.addressLine1 || !input.city || !input.postalCode || !input.country) {
+      this.addressError.set('Completa los campos obligatorios de la dirección.');
+      return;
+    }
+
+    this.isSavingAddress.set(true);
+    this.addressError.set(null);
+    const addressId = this.editingAddressId();
+    const saveRequest = addressId
+      ? this.billingInformationService.update(addressId, input)
+      : this.billingInformationService.create(input);
+
+    saveRequest.pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
+        this.isSavingAddress.set(false);
+        if (!response?.success || !response.data) {
+          this.addressError.set(response?.message || 'No se pudo guardar la dirección. Intenta nuevamente.');
+          return;
+        }
+        const savedAddress = response.data;
+        this.billingAddresses.update(addresses => addressId
+          ? addresses.map(address => address.id === addressId ? savedAddress : address)
+          : [...addresses, savedAddress]);
+        this.selectedBillingInformationId.set(savedAddress.id);
+        this.cancelAddressForm();
+      },
+      error: error => {
+        this.isSavingAddress.set(false);
+        this.addressError.set(error?.error?.message || 'No se pudo guardar la dirección. Intenta nuevamente.');
+      }
+    });
+  }
+
+  async deleteAddress(address: BillingInformation): Promise<void> {
+    const confirmed = await this.dialogService.confirm(
+      `¿Quieres eliminar la dirección de ${address.fullName}? Los pedidos anteriores usan la dirección guardada; no podrás eliminarla si ya está vinculada a un pedido.`,
+      'Eliminar dirección'
+    );
+    if (!confirmed) return;
+
+    this.addressError.set(null);
+    this.billingInformationService.delete(address.id).pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
+        if (!response?.success) {
+          this.addressError.set(response?.message || 'No se pudo eliminar la dirección.');
+          return;
+        }
+        const remainingAddresses = this.billingAddresses().filter(item => item.id !== address.id);
+        this.billingAddresses.set(remainingAddresses);
+        if (this.selectedBillingInformationId() === address.id) {
+          this.selectedBillingInformationId.set(remainingAddresses[0]?.id ?? null);
+        }
+        if (!remainingAddresses.length) this.openNewAddressForm();
+      },
+      error: error => {
+        this.addressError.set(error?.status === 409
+          ? 'No se puede eliminar esta dirección porque está vinculada a uno o más pedidos.'
+          : error?.error?.message || 'No se pudo eliminar la dirección. Intenta nuevamente.');
+      }
+    });
+  }
+
   onPlaceOrder(): void {
     if (this.isLoading()) return;
 
@@ -185,24 +246,21 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (![this.formData.firstName, this.formData.lastName, this.formData.streetAddress,
-      this.formData.townCity, this.formData.postcode, this.formData.country].every(value => value.trim())) {
-      this.error.set('Completa los datos de facturación obligatorios antes de continuar.');
+    const billingInformationId = this.selectedBillingInformationId();
+    if (!billingInformationId || !this.billingAddresses().some(address => address.id === billingInformationId)) {
+      this.error.set('Selecciona una dirección de facturación guardada antes de continuar.');
       return;
     }
 
-    const validator = (this.orderService as OrderService & {
-      validateCurrentOrder?: (orderId: number) => any
-    }).validateCurrentOrder;
-    if (!this.orderId || !validator) {
+    if (!this.orderId) {
       this.error.set('No se pudo validar el pedido. Intenta nuevamente.');
       return;
     }
 
     this.isLoading.set(true);
     this.error.set(null);
-    validator.call(this.orderService, this.orderId).pipe(takeUntil(this.destroy$)).subscribe({
-      next: (response: any) => {
+    this.orderService.validateCurrentOrder(this.orderId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
         this.isLoading.set(false);
         const rejectedItems = response?.data?.rejectedItems || [];
         if (!response?.success || response?.data?.valid !== true || rejectedItems.length) {
@@ -212,17 +270,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         }
         this.rejectedItemIds.set([]);
         const checkout: CheckoutRequest = {
-          billingAddress: {
-            fullName: `${this.formData.firstName.trim()} ${this.formData.lastName.trim()}`,
-            ...(this.formData.company?.trim() ? { company: this.formData.company.trim() } : {}),
-            addressLine1: this.formData.streetAddress.trim(),
-            ...(this.formData.streetAddress2?.trim() ? { addressLine2: this.formData.streetAddress2.trim() } : {}),
-            city: this.formData.townCity.trim(),
-            ...(this.formData.state?.trim() ? { state: this.formData.state.trim() } : {}),
-            postalCode: this.formData.postcode.trim(),
-            country: this.formData.country.trim(),
-            ...(this.formData.phone?.trim() ? { phone: this.formData.phone.trim() } : {})
-          },
+          billingInformationId,
           paymentMethod: this.paymentMethod
         };
 
@@ -267,43 +315,58 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   }
 
   /* Private Methods */
-  /* authentication and order loading logic */
-  private setupAuthStateListener(): void {
-    // Listen for storage changes to detect login/logout from other tabs
-    window.addEventListener('storage', (event) => {
-      if (event.key === 'token') {
-        this.updateLoginState();
+  private loadBillingAddresses(): void {
+    this.isLoadingAddresses.set(true);
+    this.addressError.set(null);
+    this.billingInformationService.list().pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
+        this.isLoadingAddresses.set(false);
+        if (!response?.success || !Array.isArray(response.data)) {
+          this.addressError.set(response?.message || 'No se pudieron cargar tus direcciones.');
+          return;
+        }
+        const addresses = response.data;
+        this.billingAddresses.set(addresses);
+        const currentSelection = this.selectedBillingInformationId();
+        if (!addresses.some(address => address.id === currentSelection)) {
+          this.selectedBillingInformationId.set(addresses[0]?.id ?? null);
+        }
+        if (!addresses.length) this.openNewAddressForm();
+      },
+      error: error => {
+        this.isLoadingAddresses.set(false);
+        this.addressError.set(error?.error?.message || 'No se pudieron cargar tus direcciones. Intenta nuevamente.');
       }
     });
-
-    // Set up periodic check for auth state changes
-    setInterval(() => {
-      this.updateLoginState();
-    }, 1000);
-  }
-  
-  private updateLoginState(): void {
-    this.isLoggedIn.set(this.authService.isLoggedIn());
   }
 
-  private normalizeProductImage(image?: string | null): string {
-    const safeImage = image?.trim();
-    if (!safeImage) return DEFAULT_PRODUCT_IMAGE;
-    if (safeImage.startsWith('http://') || safeImage.startsWith('https://') || safeImage.startsWith('/') || safeImage.startsWith('data:')) {
-      return safeImage;
-    }
-    return `/${safeImage.replace(/^\.?\//, '')}`;
+  private createEmptyAddress(): BillingInformationInput {
+    return {
+      fullName: '',
+      company: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: 'UY',
+      phone: ''
+    };
   }
 
-  private parsePrice(price: string | number): number {
-    const parsed = typeof price === 'string' ? parseFloat(price) : price;
-    return isNaN(parsed) ? 0 : parsed;
-  }
-
-  private handleError(message: string, error?: any): void {
-    console.error(message, error);
-    this.error.set(message);
-    setTimeout(() => this.error.set(null), 5000);
+  private normalizedAddressInput(): BillingInformationInput {
+    const trimOptional = (value?: string) => value?.trim() || undefined;
+    return {
+      fullName: this.addressForm.fullName.trim(),
+      addressLine1: this.addressForm.addressLine1.trim(),
+      city: this.addressForm.city.trim(),
+      postalCode: this.addressForm.postalCode.trim(),
+      country: this.addressForm.country.trim(),
+      company: trimOptional(this.addressForm.company),
+      addressLine2: trimOptional(this.addressForm.addressLine2),
+      state: trimOptional(this.addressForm.state),
+      phone: trimOptional(this.addressForm.phone)
+    };
   }
 
   private loadCurrentOrder(): void {

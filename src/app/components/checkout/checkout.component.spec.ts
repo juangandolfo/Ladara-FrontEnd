@@ -6,8 +6,8 @@ describe('CheckoutComponent', () => {
     return new CheckoutComponent(
       { navigate: jasmine.createSpy('navigate') } as any,
       { getCurrentOrder: () => of({ success: true, data: [] }) } as any,
-      { isLoggedIn: () => true } as any,
-      { getAllCategories: () => of({ success: true, data: [] }) } as any
+      { alert: jasmine.createSpy('alert'), confirm: jasmine.createSpy('confirm') } as any,
+      { list: () => of({ success: true, data: [] }) } as any
     );
   }
 
@@ -55,15 +55,12 @@ describe('CheckoutComponent', () => {
     const component = new CheckoutComponent(
       { navigate: jasmine.createSpy('navigate') } as any,
       { validateCurrentOrder, initiateCheckout } as any,
-      { isLoggedIn: () => true } as any,
-      { getAllCategories: () => of({ success: true, data: [] }) } as any,
-      { alert } as any
+      { alert, confirm: jasmine.createSpy('confirm') } as any,
+      { list: () => of({ success: true, data: [] }) } as any
     );
     (component as any).orderId = 12;
-    Object.assign(component.formData, {
-      firstName: 'Ada', lastName: 'Lovelace', streetAddress: '1 Example Street',
-      townCity: 'Montevideo', postcode: '11000'
-    });
+    component.billingAddresses.set([{ id: 5, fullName: 'Ada Lovelace' } as any]);
+    component.selectedBillingInformationId.set(5);
     component.cartItems.set([
       { id: 99, itemId: 99, name: 'Soap', price: 10, quantity: 1, category: 'Health' }
     ]);
@@ -90,15 +87,12 @@ describe('CheckoutComponent', () => {
     const component = new CheckoutComponent(
       { navigate: jasmine.createSpy('navigate') } as any,
       { validateCurrentOrder, initiateCheckout } as any,
-      { isLoggedIn: () => true } as any,
-      { getAllCategories: () => of({ success: true, data: [] }) } as any,
-      { alert } as any
+      { alert, confirm: jasmine.createSpy('confirm') } as any,
+      { list: () => of({ success: true, data: [] }) } as any
     );
     (component as any).orderId = 12;
-    Object.assign(component.formData, {
-      firstName: 'Ada', lastName: 'Lovelace', streetAddress: '1 Example Street',
-      company: 'Analytical Engines', townCity: 'Montevideo', postcode: '11000', country: 'UY'
-    });
+    component.billingAddresses.set([{ id: 5, fullName: 'Ada Lovelace' } as any]);
+    component.selectedBillingInformationId.set(5);
     component.paymentMethod = 'cash';
     component.cartItems.set([
       { id: 99, itemId: 99, name: 'Soap', price: 10, quantity: 1, category: 'Health' }
@@ -107,15 +101,7 @@ describe('CheckoutComponent', () => {
     component.onPlaceOrder();
 
     expect(initiateCheckout).toHaveBeenCalledWith(12, {
-      billingAddress: {
-        fullName: 'Ada Lovelace',
-        company: 'Analytical Engines',
-        addressLine1: '1 Example Street',
-        city: 'Montevideo',
-        state: 'Montevideo',
-        postalCode: '11000',
-        country: 'UY'
-      },
+      billingInformationId: 5,
       paymentMethod: 'cash'
     });
     expect(alert).toHaveBeenCalledWith('Pedido enviado. El pago aún está pendiente.', 'Pedido iniciado', 'success');

@@ -106,13 +106,7 @@ describe('OrderService', () => {
 
   it('submits checkout details to the order checkout endpoint', () => {
     const checkout = {
-      billingAddress: {
-        fullName: 'Ada Lovelace',
-        addressLine1: '1 Example Street',
-        city: 'Montevideo',
-        postalCode: '11000',
-        country: 'UY'
-      },
+      billingInformationId: 5,
       paymentMethod: 'bank_transfer' as const
     };
 

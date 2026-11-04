@@ -11,6 +11,7 @@ const DEFAULT_PLACEHOLDER_IMAGE = '/vacuna.jpg';
 // Enums
 export enum OrderStatus {
   CART = 'cart',
+  ORDER_PLACED = 'order_placed',
   PENDING = 'pending',
   PENDING_PAYMENT = 'pending_payment',
   PREPARING = 'preparing',
@@ -31,8 +32,11 @@ export interface OrderProduct {
 
 export interface OrderItem {
   id: number;
+  productId: number;
   quantity: number;
-  product: OrderProduct;
+  price?: number;
+  total?: number;
+  product?: OrderProduct;
 }
 
 export interface Order {
@@ -40,8 +44,9 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
-  items: OrderItem[];
+  items?: OrderItem[];
   total?: number;
+  paymentStatus?: 'unpaid' | 'paid';
 }
 
 interface OrderSummary {
@@ -78,11 +83,11 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
 
   // Computed properties
   readonly pendingPaymentOrders = computed(() =>
-    this.orders().filter(order => this.isPaymentPending(order.status))
+    this.orders().filter(order => this.isPaymentPending(order.status, order.paymentStatus))
   );
 
   readonly preparingOrders = computed(() =>
-    this.getOrdersByStatus([OrderStatus.PREPARING, OrderStatus.DELIVERY])
+    this.getOrdersByStatus([OrderStatus.ORDER_PLACED, OrderStatus.PREPARING, OrderStatus.DELIVERY])
   );
 
   readonly completedOrders = computed(() =>
@@ -125,7 +130,12 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
       .pipe(
         takeUntil(this.destroy$),
         catchError(error => {
-          this.handleError('Error al cargar las órdenes', error);
+          if (error?.status === 404) {
+            this.orders.set([]);
+            this.clearError();
+          } else {
+            this.handleError('Error al cargar las órdenes', error);
+          }
           this.setLoadingState(false);
           return EMPTY;
         })
@@ -153,13 +163,14 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   }
 
   // Utility Methods
-  getStatusText(status: OrderStatus | string): string {
-    if (this.isPaymentPending(status)) {
+  getStatusText(status: OrderStatus | string, paymentStatus?: string): string {
+    if (this.isPaymentPending(status, paymentStatus)) {
       return 'Pendiente de pago';
     }
 
     const statusTextMap: Record<OrderStatus, string> = {
       [OrderStatus.CART]: 'En Carrito',
+      [OrderStatus.ORDER_PLACED]: 'Pedido realizado',
       [OrderStatus.PENDING]: 'Pendiente',
       [OrderStatus.PENDING_PAYMENT]: 'Pendiente de pago',
       [OrderStatus.PREPARING]: 'Preparando',
@@ -170,13 +181,14 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
     return statusTextMap[status as OrderStatus] || String(status);
   }
 
-  getStatusClass(status: OrderStatus | string): string {
-    if (this.isPaymentPending(status)) {
+  getStatusClass(status: OrderStatus | string, paymentStatus?: string): string {
+    if (this.isPaymentPending(status, paymentStatus)) {
       return 'status-pending';
     }
 
     const statusClassMap: Record<OrderStatus, string> = {
       [OrderStatus.CART]: 'status-cart',
+      [OrderStatus.ORDER_PLACED]: 'status-preparing',
       [OrderStatus.PENDING]: 'status-pending',
       [OrderStatus.PENDING_PAYMENT]: 'status-pending',
       [OrderStatus.PREPARING]: 'status-preparing',
@@ -187,10 +199,12 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
     return statusClassMap[status as OrderStatus] || 'status-default';
   }
 
-  isPaymentPending(status: OrderStatus | string): boolean {
+  isPaymentPending(status: OrderStatus | string, paymentStatus?: string): boolean {
     const normalizedStatus = String(status).trim().toLowerCase().replace(/[\s-]+/g, '_');
-    return ['pending', 'pending_payment', 'awaiting_payment', 'waiting_for_payment']
-      .includes(normalizedStatus);
+    if (normalizedStatus === OrderStatus.ORDER_PLACED) {
+      return String(paymentStatus ?? 'unpaid').trim().toLowerCase() !== 'paid';
+    }
+    return ['pending', 'pending_payment', 'awaiting_payment', 'waiting_for_payment'].includes(normalizedStatus);
   }
 
   isOrderExpanded(orderId: number): boolean {
@@ -210,8 +224,10 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   }
 
   calculateOrderTotal(order: Order): number {
-    return order.items.reduce((total, item) => {
-      const price = this.getEffectivePrice(item.product);
+    return (order.items ?? []).reduce((total, item) => {
+      const price = item.product
+        ? this.getEffectivePrice(item.product)
+        : Number(item.price ?? 0);
       return total + (price * item.quantity);
     }, 0);
   }
@@ -285,14 +301,15 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
 
   private sortOrdersByDate(orders: Order[]): Order[] {
     return [...orders].sort((a, b) => {
-      const paymentPriority = Number(this.isPaymentPending(b.status)) - Number(this.isPaymentPending(a.status));
+      const paymentPriority = Number(this.isPaymentPending(b.status, b.paymentStatus)) -
+        Number(this.isPaymentPending(a.status, a.paymentStatus));
       return paymentPriority || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }
 
   private getOrdersByStatus(statuses: OrderStatus[]): Order[] {
     return this.orders()
-      .filter(order => statuses.includes(order.status) && !this.isPaymentPending(order.status))
+      .filter(order => statuses.includes(order.status) && !this.isPaymentPending(order.status, order.paymentStatus))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
@@ -312,7 +329,7 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
       throw new Error('No se pudo obtener el carrito actual');
     }
 
-    const addItemOperations = this.createAddItemOperations(order.items, orderId);
+    const addItemOperations = this.createAddItemOperations(order.items ?? [], orderId);
     await this.executeAddItemOperations(addItemOperations);
   }
 
@@ -340,11 +357,12 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
 
   private createAddItemOperations(items: OrderItem[], orderId: number) {
     return items.map(item =>
-      this.orderService.addItemToOrder(orderId, item.product.id, item.quantity)
+      this.orderService.addItemToOrder(orderId, item.productId ?? item.product?.id ?? 0, item.quantity)
         .pipe(
           catchError(error => {
-            console.error('Error adding item to order:', item.product.name, error);
-            return of({ success: false, data: null, message: `Error adding ${item.product.name}` });
+            const productName = item.product?.name || `producto #${item.productId}`;
+            console.error('Error adding item to order:', productName, error);
+            return of({ success: false, data: null, message: `Error adding ${productName}` });
           })
         )
     );

@@ -129,12 +129,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
           this.isLoadingPendingOrders = false;
         },
-        error: () => {
+        error: error => {
           this.pendingOrders = [];
-          this.pendingOrdersError = 'No se pudieron cargar los pedidos realizados.';
+          this.pendingOrdersError = this.getPendingOrdersErrorMessage(error);
           this.isLoadingPendingOrders = false;
         }
       });
+  }
+
+  private getPendingOrdersErrorMessage(error: any): string {
+    const backendMessage = typeof error?.error?.message === 'string'
+      ? error.error.message.trim()
+      : '';
+    if (backendMessage) return `No se pudieron cargar los pedidos: ${backendMessage}`;
+
+    switch (error?.status) {
+      case 0:
+        return 'No se pudo conectar con el servidor. Verifica que el backend esté iniciado y vuelve a intentarlo.';
+      case 401:
+        return 'Tu sesión expiró. Cierra sesión e inicia sesión nuevamente.';
+      case 403:
+        return 'Tu cuenta no tiene permisos de administrador para consultar los pedidos.';
+      default:
+        return error?.status
+          ? `No se pudieron cargar los pedidos realizados (error HTTP ${error.status}).`
+          : 'No se pudieron cargar los pedidos realizados. Inténtalo nuevamente.';
+    }
   }
 
   closePendingOrders(): void {
@@ -250,7 +270,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             Object.assign(order, response.data);
             this.fulfillmentForm = this.createFulfillmentForm(order);
             this.initialFulfillmentForm = { ...this.fulfillmentForm };
-            if (order.paymentStatus === 'paid') {
+            if (!this.isOrderPlaced(order.status)) {
               this.pendingOrders = this.pendingOrders.filter(pendingOrder => pendingOrder.id !== order.id);
             }
             this.fulfillmentMessage = 'Se actualizaron los datos de pago, facturación o entrega.';

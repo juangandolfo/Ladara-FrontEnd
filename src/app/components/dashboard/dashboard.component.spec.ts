@@ -68,14 +68,44 @@ describe('DashboardComponent', () => {
 
     component.openPendingOrders();
 
-    expect(component.pendingOrdersError).toBe('No se pudieron cargar los pedidos realizados.');
+    expect(component.pendingOrdersError).toBe('No se pudieron cargar los pedidos realizados. Inténtalo nuevamente.');
     expect(component.isLoadingPendingOrders).toBeFalse();
+  });
+
+  it('shows the backend reason when the admin order endpoint fails', () => {
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      {
+        getAllOrdersForAdmin: () => throwError(() => ({
+          status: 500,
+          error: { message: 'Order shipping cost is invalid' }
+        }))
+      } as any
+    );
+
+    component.openPendingOrders();
+
+    expect(component.pendingOrdersError).toBe('No se pudieron cargar los pedidos: Order shipping cost is invalid');
+    expect(component.isLoadingPendingOrders).toBeFalse();
+  });
+
+  it('explains authorization failures when loading admin orders', () => {
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      { getAllOrdersForAdmin: () => throwError(() => ({ status: 403 })) } as any
+    );
+
+    component.openPendingOrders();
+
+    expect(component.pendingOrdersError).toBe('Tu cuenta no tiene permisos de administrador para consultar los pedidos.');
   });
 
   it('opens order details and sends only changed fulfillment fields', () => {
     const order = {
       id: 21,
-      status: 'pending_payment',
+      status: 'order_placed',
       total: 40,
       createdAt: '2026-01-02',
       paymentMethod: 'bank_transfer',
@@ -121,7 +151,7 @@ describe('DashboardComponent', () => {
       isDelivered: true
     });
     expect(component.selectedPendingOrder?.paymentStatus).toBe('paid');
-    expect(component.pendingOrders).toEqual([]);
+    expect(component.pendingOrders.map(pendingOrder => pendingOrder.id)).toEqual([21]);
     expect(component.fulfillmentMessage).toContain('Se actualizaron');
     expect(component.getWorkflowStatusLabel('completed')).toBe('Completado');
     expect(component.isUpdatingFulfillment).toBeFalse();
