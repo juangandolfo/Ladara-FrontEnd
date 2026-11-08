@@ -558,7 +558,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (response) => {
-            if (response.success && response.data) {
+            if (response?.success && Array.isArray(response.data)) {
               this.categories.set([ALL_CATEGORIES, ...response.data]);
             }
             resolve();
@@ -578,13 +578,14 @@ export class HomeComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          const normalizedProducts = (response.data || []).map(product => ({
+          const products = Array.isArray(response?.data) ? response.data : [];
+          const normalizedProducts = products.map(product => ({
             ...product,
             image: this.normalizeProductImage(product.image)
           }));
 
           this.products.set(normalizedProducts);
-          this.totalCount.set(response.meta?.total || 0);
+          this.totalCount.set(Number(response?.meta?.total) || 0);
           // Initialize quantities for new products
           this.initializeProductQuantities(normalizedProducts);
         },

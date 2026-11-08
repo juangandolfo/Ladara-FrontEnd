@@ -1,4 +1,4 @@
-import { NEVER, of, Subject } from 'rxjs';
+import { NEVER, of, Subject, throwError } from 'rxjs';
 import { CartComponent } from './cart.component';
 
 describe('CartComponent', () => {
@@ -265,6 +265,46 @@ describe('CartComponent', () => {
 
     expect(component['cartItems']()[0].quantity).toBe(3);
     expect(component['pendingQuantities'].has(99)).toBeFalse();
+  });
+
+  it('surfaces quantity and clear-cart transport failures while preserving cleanup behavior', () => {
+    jest.useFakeTimers();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const component = new CartComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      {
+        updateItemQuantity: () => throwError(() => new Error('sync failure')),
+        clearCurrentCart: () => throwError(() => new Error('sync failure'))
+      } as any,
+      { isLoggedIn: () => true } as any
+    );
+    component.cartItems.set([
+      { id: 7, itemId: 99, name: 'Soap', price: 10, quantity: 1, category: 'Health' }
+    ]);
+
+    component.updateQuantity(7, 1);
+    expect(component.error()).toBe('Error updating quantity');
+    component.clearCart();
+    expect(component.isEmpty()).toBeTrue();
+    jest.advanceTimersByTime(5000);
+  });
+
+  it('handles invalid coupon discounts and coupon validation transport errors', () => {
+    let validationCall = 0;
+    const component = new CartComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      {
+        validateCoupon: () => validationCall++ === 0
+          ? of({ success: true, data: { code: 'BAD-DISCOUNT', discountAmount: 0 } })
+          : throwError(() => new Error('offline'))
+      } as any,
+      { isLoggedIn: () => true } as any
+    );
+
+    component.applyCouponCode('SAVE');
+    expect(component.couponError()).toBe('El servidor devolvió un descuento inválido');
+    component.applyCouponCode('SAVE');
+    expect(component.couponError()).toBe('No se pudo validar el cupón. Intenta nuevamente.');
   });
 
   describe('Frontend agent acceptance coverage', () => {

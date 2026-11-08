@@ -1,5 +1,5 @@
-import { of } from 'rxjs';
-import { fakeAsync, tick } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
+import { fakeAsync, flushMicrotasks, tick } from '@angular/core/testing';
 import { HomeComponent } from './home.component';
 
 describe('HomeComponent', () => {
@@ -210,4 +210,152 @@ describe('HomeComponent', () => {
     expect(localStorage.getItem('ladara-guest-cart')).toBeNull();
     expect(component.guestCart()).toEqual([]);
   });
+
+  it('loads categories and products and initializes product quantity state', async () => {
+    const categories = jasmine.createSpy('getAllCategories').and.returnValue(of({ success: true, data: ['Health'] }));
+    const filter = jasmine.createSpy('filterProductsQuery').and.returnValue(of({
+      data: [{ id: 3, name: 'Mask', image: 'mask.jpg', price: 10 }],
+      meta: { total: 1 }
+    }));
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { getAllCategories: categories, filterProductsQuery: filter } as any,
+      {} as any,
+      { isLoggedIn: () => false } as any,
+      dialogService as any
+    );
+
+    await component.ngOnInit();
+
+    expect(component.categories()).toEqual(['Todas', 'Health']);
+    expect(component.products()[0]).toEqual(jasmine.objectContaining({ id: 3, image: '/mask.jpg' }));
+    expect(component.totalCount()).toBe(1);
+    expect(component.getProductQuantity(3)).toBe(1);
+    expect(component.isLoading()).toBeFalse();
+  });
+
+  it('normalizes malformed category/product payloads and clears products on request failure', async () => {
+    const categories = jasmine.createSpy('getAllCategories').and.returnValue(of({ success: true, data: 'invalid' }));
+    let filterCall = 0;
+    const filter = () => filterCall++ === 0
+      ? of({ data: { id: 1 }, meta: { total: 0 } })
+      : throwError(() => new Error('offline'));
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { getAllCategories: categories, filterProductsQuery: filter } as any,
+      {} as any,
+      { isLoggedIn: () => false } as any,
+      dialogService as any
+    );
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await component.ngOnInit();
+    expect(component.categories()).toEqual([]);
+    expect(component.products()).toEqual([]);
+    expect(component.totalCount()).toBe(0);
+    component['fetchFilteredProducts']();
+    expect(component.products()).toEqual([]);
+    expect(consoleError).toHaveBeenCalled();
+  });
+
+  it('replaces pending debounced searches, clears the search, and enforces pagination bounds', fakeAsync(() => {
+    const component = createComponent();
+    const fetch = spyOn<any>(component, 'fetchFilteredProducts');
+    component.totalCount.set(12);
+    component.currentPage.set(2);
+    component.onSearch({ target: { value: ' glove ' } } as any);
+    tick(150);
+    component.onSearch({ target: { value: ' mask ' } } as any);
+    tick(299);
+    expect(component.searchTerm()).toBe('');
+    tick(1);
+    expect(component.searchTerm()).toBe('mask');
+    expect(component.currentPage()).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    component.clearSearchFilter();
+    expect(component.searchTerm()).toBe('');
+    expect(fetch).toHaveBeenCalledTimes(2);
+    component.totalCount.set(0);
+    component.goToPage(1);
+    expect(component.currentPage()).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    component.totalCount.set(12);
+    component.currentPage.set(1);
+    component.previousPage();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    component.nextPage();
+    expect(component.currentPage()).toBe(2);
+    component.currentPage.set(3);
+    component.nextPage();
+    expect(component.currentPage()).toBe(3);
+  }));
+
+  it('shows an error when adding an authenticated product fails', () => {
+    const alert = jasmine.createSpy('alert').and.returnValue(Promise.resolve(true));
+    const addItemToOrder = jasmine.createSpy('addItemToOrder').and.returnValue(throwError(() => new Error('offline')));
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { filterProductsQuery: jasmine.createSpy().and.returnValue(of({ data: [], meta: { total: 0 } })) } as any,
+      { addItemToOrder } as any,
+      { isLoggedIn: () => true } as any,
+      { confirm: jasmine.createSpy('confirm'), alert } as any
+    );
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    component.isLoggedIn.set(true);
+    component['currentOrderId'] = 7;
+
+    component.addToCart(5);
+
+    expect(alert).toHaveBeenCalledWith(
+      'No se pudo añadir el producto al carrito. Intenta nuevamente.',
+      'Error al añadir producto',
+      'warning'
+    );
+    expect(component.cartItemCount()).toBe(0);
+  });
+
+  it('preserves a guest cart after failed synchronization and reports local-storage failures', () => {
+    localStorage.setItem('ladara-guest-cart', JSON.stringify([{ productId: 5, quantity: 2 }]));
+    const addItemToOrder = jasmine.createSpy('addItemToOrder').and.returnValue(throwError(() => new Error('offline')));
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { filterProductsQuery: jasmine.createSpy().and.returnValue(of({ data: [], meta: { total: 0 } })) } as any,
+      { addItemToOrder } as any,
+      { isLoggedIn: () => true } as any,
+      dialogService as any
+    );
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    component['syncGuestCart'](42);
+    expect(component.cartFeedback()).toContain('Se conservaron tus productos');
+    expect(component.guestCart()).toEqual([{ productId: 5, quantity: 2 }]);
+
+    const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('Storage unavailable');
+    });
+    component['persistGuestCart']([{ productId: 5, quantity: 3 }]);
+    expect(component.cartFeedback()).toBe('No se pudo guardar el carrito en este dispositivo');
+    setItem.mockRestore();
+  });
+
+  it('honors guest login confirmation accept and cancel outcomes', fakeAsync(() => {
+    const loginWithGoogle = jasmine.createSpy('loginWithGoogle');
+    let confirmCall = 0;
+    const confirm = () => [Promise.resolve(true), Promise.resolve(false)][confirmCall++];
+    const component = new HomeComponent(
+      { navigate: jasmine.createSpy('navigate').and.resolveTo(true) } as any,
+      { filterProductsQuery: jasmine.createSpy().and.returnValue(of({ data: [], meta: { total: 0 } })) } as any,
+      {} as any,
+      { isLoggedIn: () => false, loginWithGoogle } as any,
+      { confirm, alert: jasmine.createSpy('alert') } as any
+    );
+
+    component.goToCart();
+    flushMicrotasks();
+    tick(1000);
+    component.goToCart();
+    flushMicrotasks();
+    expect(loginWithGoogle).toHaveBeenCalledTimes(1);
+  }));
 });

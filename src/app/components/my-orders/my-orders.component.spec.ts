@@ -105,4 +105,52 @@ describe('MyOrdersComponent', () => {
     expect(component.error()).toBe('Error al cargar las órdenes');
     expect(component.isEmpty()).toBeFalse();
   });
+
+  it('shows the empty state for an empty response and a not-found order history', () => {
+    const emptyResponse = createComponent({ getAllOrders: () => of({ success: true, data: [] }) });
+    emptyResponse.loadOrders();
+    expect(emptyResponse.isEmpty()).toBeTrue();
+
+    const notFound = createComponent({ getAllOrders: () => throwError(() => ({ status: 404 })) });
+    notFound.loadOrders();
+    expect(notFound.orders()).toEqual([]);
+    expect(notFound.error()).toBeNull();
+    expect(notFound.isEmpty()).toBeTrue();
+    expect(notFound.isLoading()).toBeFalse();
+  });
+
+  it('reports an invalid order response and a current-cart failure when repeating', async () => {
+    const invalid = createComponent({ getAllOrders: () => of({ success: false, message: 'Invalid payload' }) });
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    invalid.loadOrders();
+    expect(invalid.error()).toContain('Invalid payload');
+    expect(invalid.isLoading()).toBeFalse();
+
+    const router = { navigate: jasmine.createSpy('navigate') };
+    const repeatFailure = new MyOrdersComponent(router as any, {
+      getCurrentOrder: () => throwError(() => new Error('offline'))
+    } as any);
+    await repeatFailure.repeatOrder(order(3, OrderStatus.COMPLETED, '2026-01-01', 10));
+    expect(repeatFailure.error()).toBe('Error al repetir la orden');
+    expect(repeatFailure.isRepeatingOrder()).toBeFalse();
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('continues a repeat order when an individual add operation fails', async () => {
+    const router = { navigate: jasmine.createSpy('navigate') };
+    const addItemToOrder = jasmine.createSpy('addItemToOrder').and.returnValue(
+      throwError(() => new Error('item unavailable'))
+    );
+    const component = new MyOrdersComponent(router as any, {
+      getCurrentOrder: () => of({ data: [{ id: 99 }] }),
+      addItemToOrder
+    } as any);
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await component.repeatOrder(order(4, OrderStatus.COMPLETED, '2026-01-01', 10));
+
+    expect(addItemToOrder).toHaveBeenCalledWith(99, 400, 2);
+    expect(router.navigate).toHaveBeenCalledWith(['/carrito']);
+    expect(component.isRepeatingOrder()).toBeFalse();
+  });
 });

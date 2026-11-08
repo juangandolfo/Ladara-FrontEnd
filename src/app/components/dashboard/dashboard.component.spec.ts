@@ -244,4 +244,52 @@ describe('DashboardComponent', () => {
     component.onPendingOrdersBackdropClick({ target: {}, currentTarget: dialog } as MouseEvent);
     expect(closeOnContentClick).not.toHaveBeenCalled();
   });
+
+  it('does not send an unchanged fulfillment form and reports unsuccessful responses', () => {
+    const updateOrderFulfillment = jasmine.createSpy('updateOrderFulfillment').and.returnValue(of({
+      success: false,
+      message: 'Update rejected'
+    }));
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      { updateOrderFulfillment } as any
+    );
+    const order = {
+      id: 8, status: 'order_placed', total: 10, createdAt: '2026-01-01',
+      paymentStatus: 'unpaid', paymentReference: null, paidAt: null, invoiceIdentifier: null,
+      invoiceIssuedAt: null, isDelivered: false, deliveredAt: null, deliveryDocumentIdentifier: null,
+      completedAt: null
+    };
+
+    component.openPendingOrderDetail(order as any);
+    component.saveOrderFulfillment();
+    expect(updateOrderFulfillment).not.toHaveBeenCalled();
+
+    component.setPaymentStatus({ target: { value: 'paid' } } as any);
+    component.saveOrderFulfillment();
+    expect(updateOrderFulfillment).toHaveBeenCalledWith(8, { paymentStatus: 'paid' });
+    expect(component.fulfillmentError).toBe('Update rejected');
+    expect(component.isUpdatingFulfillment).toBeFalse();
+  });
+
+  it('shows a generic fulfillment error for a non-conflict transport failure', () => {
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      { updateOrderFulfillment: () => throwError(() => ({ status: 500 })) } as any
+    );
+    const order = {
+      id: 9, status: 'order_placed', total: 10, createdAt: '2026-01-01', paymentStatus: 'unpaid',
+      paymentReference: null, paidAt: null, invoiceIdentifier: null, invoiceIssuedAt: null,
+      isDelivered: false, deliveredAt: null, deliveryDocumentIdentifier: null, completedAt: null
+    };
+
+    component.openPendingOrderDetail(order as any);
+    component.setDelivered({ target: { checked: true } } as any);
+    component.saveOrderFulfillment();
+
+    expect(component.fulfillmentError).toBe('No se pudo actualizar el pedido. Inténtalo nuevamente.');
+    expect(component.isUpdatingFulfillment).toBeFalse();
+  });
 });

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { fakeAsync, tick } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { OrderService } from './order.service';
@@ -118,4 +119,54 @@ describe('OrderService', () => {
     expect(request.request.headers.get('Authorization')).toBe('Bearer order-token');
     request.flush({ success: true, message: 'Checkout details saved; payment has not been processed' });
   });
+
+  it('retries a transient server failure once and can then succeed', fakeAsync(() => {
+    let response: unknown;
+    let failure: unknown;
+    service.addItemToOrder(8, 12, 1).subscribe({
+      next: value => response = value,
+      error: error => failure = error
+    });
+
+    httpTesting.expectOne('http://localhost:3000/api/orders/8/items').flush('unavailable', {
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
+    tick(150);
+    httpTesting.expectOne('http://localhost:3000/api/orders/8/items').flush({ success: true });
+
+    expect(response).toEqual({ success: true });
+    expect(failure).toBeUndefined();
+  }));
+
+  it('stops after the configured retry when a transient request keeps failing', fakeAsync(() => {
+    let failure: any;
+    service.clearCurrentCart().subscribe({ error: error => failure = error });
+
+    httpTesting.expectOne('http://localhost:3000/api/orders/current/items').flush('offline', {
+      status: 0,
+      statusText: 'Unknown Error'
+    });
+    tick(150);
+    httpTesting.expectOne('http://localhost:3000/api/orders/current/items').flush('still unavailable', {
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
+
+    expect(failure?.status).toBe(503);
+  }));
+
+  it('does not retry a non-transient client error', fakeAsync(() => {
+    let failure: any;
+    service.deleteItemFromOrder(22).subscribe({ error: error => failure = error });
+
+    httpTesting.expectOne('http://localhost:3000/api/orders/items/22').flush('invalid', {
+      status: 400,
+      statusText: 'Bad Request'
+    });
+    tick(200);
+
+    expect(failure?.status).toBe(400);
+    httpTesting.expectNone('http://localhost:3000/api/orders/items/22');
+  }));
 });

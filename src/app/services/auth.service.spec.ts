@@ -56,6 +56,68 @@ describe('AuthService', () => {
     expect(service.isAdminUser({ isAdmin: true })).toBeTrue();
     expect(service.isAdminUser({ user: { isAdmin: true } })).toBeTrue();
     expect(service.isAdminUser({ isAdmin: false })).toBeFalse();
+    expect(service.isAdminUser(null)).toBeFalse();
+  });
+
+  it('normalizes direct current-user payloads and empty responses', () => {
+    localStorage.setItem('token', 'token-456');
+    service.getCurrentUser().subscribe(user => {
+      expect(user).toEqual({ id: 8, name: 'Ada', isAdmin: false });
+    });
+    httpTesting.expectOne('http://localhost:3000/auth/me').flush({ id: 8, name: 'Ada' });
+
+    service.getCurrentUser().subscribe(user => expect(user).toBeNull());
+    httpTesting.expectOne('http://localhost:3000/auth/me').flush(null);
+  });
+
+  it('tracks login state with and without a token', () => {
+    expect(service.isLoggedIn()).toBeFalse();
+    localStorage.setItem('token', 'token-789');
+    expect(service.isLoggedIn()).toBeTrue();
+  });
+
+  it('ignores invalid login messages and accepts a valid regular-user message', () => {
+    const popup = { closed: false, close: jasmine.createSpy('close') };
+    spyOn(window, 'open').and.returnValue(popup as any);
+    spyOn(window, 'addEventListener').and.callThrough();
+    const removeListener = spyOn(window, 'removeEventListener').and.callThrough();
+    const dispatch = spyOn(window, 'dispatchEvent').and.callThrough();
+    const router = TestBed.inject(Router) as any;
+
+    service.loginWithGoogle();
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: 'https://untrusted.example', data: { token: 'ignored' }
+    }));
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: 'http://localhost:3000', data: { user: { id: 2 } }
+    }));
+    expect(localStorage.getItem('token')).toBeNull();
+
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: 'http://localhost:3000', data: { token: 'regular-token', user: { id: 2, isAdmin: false } }
+    }));
+
+    expect(localStorage.getItem('token')).toBe('regular-token');
+    expect(popup.close).toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith(jasmine.objectContaining({ key: 'token', newValue: 'regular-token' }));
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(removeListener).toHaveBeenCalledWith('message', expect.any(Function));
+  });
+
+  it('redirects an admin after login even when the popup was blocked', () => {
+    spyOn(window, 'open').and.returnValue(null);
+    spyOn(window, 'addEventListener').and.callThrough();
+    const removeListener = spyOn(window, 'removeEventListener').and.callThrough();
+    const router = TestBed.inject(Router) as any;
+
+    service.loginWithGoogle();
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: 'http://localhost:3000', data: { token: 'admin-token', user: { isAdmin: true } }
+    }));
+
+    expect(localStorage.getItem('token')).toBe('admin-token');
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard']);
+    expect(removeListener).toHaveBeenCalledWith('message', expect.any(Function));
   });
 
   it('logs out by removing the token and dispatching a storage event', () => {
