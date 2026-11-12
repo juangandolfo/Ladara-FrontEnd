@@ -22,60 +22,309 @@
 .dashboard-content {
   width: min(100%, 1200px);
   margin: 0 auto;
-  padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-section-desktop);
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-section-desktop);
+}
+
+.dashboard-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .dashboard-title {
-  margin-bottom: var(--spacing-xl);
-  font-size: 2rem;
+  margin-bottom: var(--spacing-xs);
+  font-size: 1.75rem;
+}
+
+.dashboard-heading p,
+.metric-caption,
+.panel-heading p,
+.panel-supporting,
+.analytics-note {
+  color: var(--color-secondary-dark);
+  font-size: 0.875rem;
 }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
 .metric-card {
   min-width: 0;
-  min-height: 160px;
+  min-height: 144px;
   padding: var(--spacing-lg);
   border: 1px solid var(--color-secondary-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background-color: var(--color-white);
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: var(--spacing-md);
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  text-align: left;
 }
 
 .metric-card-action {
   width: 100%;
   color: inherit;
   font: inherit;
-  text-align: left;
   cursor: pointer;
 }
 
-.metric-card-action:hover {
-  border-color: var(--color-primary-violet);
+.metric-card-action:hover:not(:disabled) {
+  border-color: var(--color-primary-lime-hover);
   box-shadow: var(--shadow-md);
 }
 
-.metric-card h3 {
+.metric-card h2,
+.metric-label {
   color: var(--color-secondary-dark);
   font-family: var(--font-ui);
-  font-size: 1rem;
-  line-height: 1.5;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .metric-value {
   color: var(--color-primary-violet);
-  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-size: 1.75rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+.metric-unavailable {
+  color: var(--color-secondary-dark);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.metric-caption {
+  line-height: 1.4;
+}
+
+.metric-skeleton {
+  width: 60%;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary-light);
+}
+
+.dashboard-panels {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.dashboard-panel {
+  min-width: 0;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-secondary-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.revenue-panel,
+.recent-orders-panel {
+  grid-column: span 8;
+}
+
+.fulfillment-panel,
+.analytics-panel {
+  grid-column: span 4;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.panel-heading h2 {
+  margin-bottom: var(--spacing-xs);
+  font-size: 1.125rem;
+}
+
+.panel-total {
+  color: var(--color-primary-violet);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.revenue-chart {
+  height: 200px;
+  margin-top: var(--spacing-lg);
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: var(--spacing-md);
+  border-bottom: 1px solid var(--color-secondary-border);
+}
+
+.chart-column {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.chart-bar {
+  width: min(100%, 40px);
+  min-height: 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--color-primary-lime);
+}
+
+.chart-label {
+  padding-bottom: var(--spacing-sm);
+  color: var(--color-secondary-dark);
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.chart-empty,
+.panel-state,
+.chart-loading {
+  margin-top: var(--spacing-md);
+  color: var(--color-secondary-dark);
+  font-size: 0.875rem;
+}
+
+.fulfillment-count {
+  margin: var(--spacing-xl) 0 var(--spacing-sm);
+  color: var(--color-primary-violet);
+  font-size: 2.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.panel-supporting {
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.5;
+}
+
+.panel-action,
+.dashboard-refresh {
+  min-height: 44px;
+}
+
+.panel-link {
+  min-height: 44px;
+  padding: var(--spacing-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-primary-violet);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.panel-link:hover {
+  color: var(--color-primary-violet-hover);
+}
+
+.table-scroll {
+  margin-top: var(--spacing-md);
+  overflow-x: auto;
+}
+
+.recent-orders-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.recent-orders-table th,
+.recent-orders-table td {
+  padding: var(--spacing-md) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-secondary-border);
+  font-size: 0.875rem;
+}
+
+.recent-orders-table thead th {
+  color: var(--color-secondary-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.recent-orders-table tbody th {
+  color: var(--color-primary-violet);
+  font-weight: 600;
+}
+
+.amount-column {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.order-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-secondary-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-secondary-dark);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.status-completed {
+  border-color: var(--color-success);
+}
+
+.status-progress {
+  border-color: var(--color-primary-violet);
+}
+
+.status-pending {
+  border-color: var(--color-warning);
+}
+
+.analytics-list {
+  display: grid;
+  gap: var(--spacing-sm);
+  margin: var(--spacing-lg) 0;
+  padding-left: var(--spacing-lg);
+  color: var(--color-secondary-dark);
+  font-size: 0.875rem;
+}
+
+.analytics-note {
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-secondary-border);
+  line-height: 1.5;
+}
+
+.dashboard-orders-error {
+  margin-bottom: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+}
+
+.dashboard-orders-error h2 {
+  margin-bottom: var(--spacing-xs);
+  font-size: 1.125rem;
 }
 
 .dashboard-loading,
@@ -84,6 +333,10 @@
   border: 1px solid var(--color-secondary-border);
   border-radius: var(--radius-lg);
   background-color: var(--color-white);
+}
+
+.dashboard-error {
+  margin-bottom: var(--spacing-lg);
 }
 
 .dashboard-loading {
@@ -428,6 +681,20 @@
   .metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .dashboard-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .revenue-panel,
+  .recent-orders-panel {
+    grid-column: span 2;
+  }
+
+  .fulfillment-panel,
+  .analytics-panel {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 768px) {
@@ -435,12 +702,50 @@
     padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xl);
   }
 
+  .dashboard-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: var(--spacing-lg);
+  }
+
   .dashboard-title {
     font-size: 1.75rem;
   }
 
+  .dashboard-refresh {
+    width: 100%;
+  }
+
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .revenue-panel,
+  .recent-orders-panel,
+  .fulfillment-panel,
+  .analytics-panel {
+    grid-column: auto;
+  }
+
+  .dashboard-panel {
+    padding: var(--spacing-md);
+  }
+
+  .panel-heading {
+    align-items: flex-start;
+  }
+
+  .dashboard-orders-error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboard-orders-error .btn {
+    align-self: flex-start;
   }
 
   .logo-button span {

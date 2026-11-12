@@ -11,6 +11,13 @@ interface DashboardMetric {
   value: number;
 }
 
+interface RevenueDay {
+  date: string;
+  label: string;
+  value: number;
+  height: number;
+}
+
 interface AdminFulfillmentForm {
   paymentStatus: OrderPaymentStatus;
   paymentReference: string;
@@ -33,6 +40,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   summary: AdminDashboardSummary | null = null;
   isLoading = true;
   error: string | null = null;
+  dashboardOrders: AdminOrder[] = [];
+  isLoadingDashboardOrders = true;
+  dashboardOrdersError: string | null = null;
   pendingOrders: AdminOrder[] = [];
   completedOrders: AdminOrder[] = [];
   isLoadingPendingOrders = false;
@@ -55,6 +65,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadSummary();
+    this.loadDashboardOrders();
   }
 
   ngOnDestroy(): void {
@@ -101,6 +112,110 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         }
       });
+  }
+
+  loadDashboardOrders(): void {
+    this.isLoadingDashboardOrders = true;
+    this.dashboardOrdersError = null;
+    this.orderService.getAllOrdersForAdmin()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          if (!response.success || !Array.isArray(response.data)) {
+            this.dashboardOrders = [];
+            this.dashboardOrdersError = response.message || 'La respuesta de pedidos no es válida.';
+          } else {
+            this.dashboardOrders = response.data;
+          }
+          this.isLoadingDashboardOrders = false;
+        },
+        error: error => {
+          this.dashboardOrders = [];
+          this.dashboardOrdersError = this.getPendingOrdersErrorMessage(error);
+          this.isLoadingDashboardOrders = false;
+        }
+      });
+  }
+
+  get confirmedRevenue(): number {
+    return this.dashboardOrders
+      .filter(order => this.isRevenueConfirmed(order))
+      .reduce((total, order) => total + this.getOrderAmount(order), 0);
+  }
+
+  get confirmedOrderCount(): number {
+    return this.dashboardOrders.filter(order => this.isRevenueConfirmed(order)).length;
+  }
+
+  get recentDashboardOrders(): AdminOrder[] {
+    return this.dashboardOrders
+      .filter(order => !['cart', 'cancelled'].includes(order.status.toLowerCase()))
+      .slice()
+      .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
+      .slice(0, 5);
+  }
+
+  get revenueDays(): RevenueDay[] {
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + index);
+      return { date, key: this.getLocalDateKey(date), value: 0 };
+    });
+    const totals = new Map(days.map(day => [day.key, day.value]));
+
+    this.dashboardOrders
+      .filter(order => this.isRevenueConfirmed(order))
+      .forEach(order => {
+        const paidDate = order.paidAt || order.completedAt || order.createdAt;
+        const date = new Date(paidDate);
+        if (Number.isNaN(date.getTime())) return;
+        const key = this.getLocalDateKey(date);
+        if (totals.has(key)) totals.set(key, (totals.get(key) || 0) + this.getOrderAmount(order));
+      });
+
+    const maximum = Math.max(0, ...totals.values());
+    return days.map(day => ({
+      date: day.key,
+      label: day.date.toLocaleDateString('es', { weekday: 'short' }),
+      value: totals.get(day.key) || 0,
+      height: maximum ? ((totals.get(day.key) || 0) / maximum) * 100 : 0
+    }));
+  }
+
+  get paidRevenueLastSevenDays(): number {
+    return this.revenueDays.reduce((total, day) => total + day.value, 0);
+  }
+
+  getRevenueChartDescription(): string {
+    const dailyValues = this.revenueDays.map(day => `${day.label}: ${day.value}`).join(', ');
+    return `Ingresos confirmados durante los últimos siete días. Total: ${this.paidRevenueLastSevenDays}. ${dailyValues}`;
+  }
+
+  getOrderAmount(order: AdminOrder): number {
+    const amount = Number(order.total);
+    return Number.isFinite(amount) ? amount : 0;
+  }
+
+  getOrderStatusLabel(status: string): string {
+    return this.getWorkflowStatusLabel(status);
+  }
+
+  getOrderStatusClass(status: string): string {
+    if (this.isOrderCompleted(status)) return 'status-completed';
+    if (this.isOrderPlaced(status)) return 'status-pending';
+    return 'status-progress';
+  }
+
+  private getLocalDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private isRevenueConfirmed(order: AdminOrder): boolean {
+    const status = order.status.trim().toLowerCase();
+    return order.paymentStatus === 'paid' && status !== 'cancelled' && status !== 'canceled';
   }
 
   trackByMetricLabel(index: number, metric: DashboardMetric): string {
@@ -295,6 +410,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             }
             this.fulfillmentMessage = 'Se actualizaron los datos de pago, facturación o entrega.';
             this.loadSummary();
+            this.loadDashboardOrders();
           }
           this.isUpdatingFulfillment = false;
         },

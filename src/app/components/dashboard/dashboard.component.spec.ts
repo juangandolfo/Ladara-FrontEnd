@@ -59,6 +59,38 @@ describe('DashboardComponent', () => {
     expect(component.isLoading).toBeFalse();
   });
 
+  it('derives confirmed revenue and recent dashboard orders from admin orders', () => {
+    const today = new Date();
+    const paidAt = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12).toISOString();
+    const orderService = {
+      getAllOrdersForAdmin: () => of({
+        success: true,
+        data: [
+          { id: 1, status: 'order_placed', total: '25.50', createdAt: paidAt, paymentStatus: 'paid', paidAt },
+          { id: 2, status: 'completed', total: 74.5, createdAt: paidAt, paymentStatus: 'paid', paidAt },
+          { id: 3, status: 'order_placed', total: 10, createdAt: paidAt, paymentStatus: 'unpaid', paidAt: null },
+          { id: 4, status: 'cart', total: 15, createdAt: paidAt, paymentStatus: 'unpaid', paidAt: null },
+          { id: 5, status: 'cancelled', total: 20, createdAt: paidAt, paymentStatus: 'paid', paidAt }
+        ]
+      })
+    };
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      orderService as any
+    );
+
+    component.loadDashboardOrders();
+
+    expect(component.confirmedRevenue).toBe(100);
+    expect(component.confirmedOrderCount).toBe(2);
+    expect(component.paidRevenueLastSevenDays).toBe(100);
+    expect(component.revenueDays[6].value).toBe(100);
+    expect(component.recentDashboardOrders.map(order => order.id)).toEqual([1, 2, 3]);
+    expect(component.isLoadingDashboardOrders).toBeFalse();
+    component.ngOnDestroy();
+  });
+
   it('shows a retryable error when pending orders cannot be loaded', () => {
     const component = new DashboardComponent(
       { navigate: jasmine.createSpy('navigate') } as any,
@@ -129,7 +161,8 @@ describe('DashboardComponent', () => {
       getAdminDashboardSummary: jasmine.createSpy('getAdminDashboardSummary').and.returnValue(of({
         success: true,
         data: { cartCount: 0, orderPlacedCount: 0, completedLast30DaysCount: 1 }
-      }))
+      })),
+      getAllOrdersForAdmin: jasmine.createSpy('getAllOrdersForAdmin').and.returnValue(of({ success: true, data: [] }))
     };
     const component = new DashboardComponent(
       { navigate: jasmine.createSpy('navigate') } as any,
@@ -150,6 +183,7 @@ describe('DashboardComponent', () => {
       paymentStatus: 'paid',
       isDelivered: true
     });
+    expect(orderService.getAllOrdersForAdmin).toHaveBeenCalled();
     expect(component.selectedPendingOrder?.paymentStatus).toBe('paid');
     expect(component.pendingOrders.map(pendingOrder => pendingOrder.id)).toEqual([21]);
     expect(component.fulfillmentMessage).toContain('Se actualizaron');
@@ -178,6 +212,10 @@ describe('DashboardComponent', () => {
       getAllOrdersForAdmin: jasmine.createSpy('getAllOrdersForAdmin').and.returnValue(of({
         success: true,
         data: [completedOrder, { ...completedOrder, id: 46, status: 'order_placed' }]
+      })),
+      getAdminDashboardSummary: jasmine.createSpy('getAdminDashboardSummary').and.returnValue(of({
+        success: true,
+        data: { cartCount: 0, orderPlacedCount: 1, completedLast30DaysCount: 1 }
       })),
       updateOrderFulfillment: jasmine.createSpy('updateOrderFulfillment').and.returnValue(of({
         success: true,

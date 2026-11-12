@@ -29,36 +29,153 @@
   </header>
 
   <main class="dashboard-content" aria-labelledby="dashboard-title">
-    <h2 class="dashboard-title" id="dashboard-title">Resumen de pedidos</h2>
+    <header class="dashboard-heading">
+      <div>
+        <h1 class="dashboard-title" id="dashboard-title">Panel de control</h1>
+        <p>Resumen de ventas y actividad de pedidos</p>
+      </div>
+      <button class="btn btn-secondary dashboard-refresh" type="button" (click)="loadSummary(); loadDashboardOrders()"
+        [disabled]="isLoading || isLoadingDashboardOrders" [attr.aria-busy]="isLoading || isLoadingDashboardOrders">
+        {{ isLoading || isLoadingDashboardOrders ? 'Actualizando…' : 'Actualizar datos' }}
+      </button>
+    </header>
 
-    <div class="dashboard-loading" *ngIf="isLoading" role="status" aria-live="polite" aria-busy="true">
-      Cargando indicadores de pedidos...
+    <div class="dashboard-loading" *ngIf="isLoading && !summary" role="status" aria-live="polite" aria-busy="true">
+      Cargando indicadores de pedidos…
     </div>
 
     <section class="dashboard-error" *ngIf="error && !isLoading" role="alert" aria-labelledby="dashboard-error-title">
-      <h3 id="dashboard-error-title">No pudimos cargar los indicadores</h3>
+      <h2 id="dashboard-error-title">No pudimos cargar los indicadores</h2>
       <p>{{ error }}</p>
       <button class="btn btn-secondary" type="button" (click)="loadSummary()">Reintentar</button>
     </section>
 
-    <section class="metrics-grid" *ngIf="summary && !isLoading" aria-label="Indicadores de pedidos" aria-live="polite">
-      <ng-container *ngFor="let metric of metrics; trackBy: trackByMetricLabel">
-        <button class="metric-card metric-card-action" *ngIf="metric.label === 'Pedidos realizados'"
-          type="button" (click)="openPendingOrders()" aria-haspopup="dialog" aria-label="Ver pedidos realizados">
-          <h3>{{ metric.label }}</h3>
-          <p class="metric-value">{{ metric.value | number }}</p>
-        </button>
-        <button class="metric-card metric-card-action" *ngIf="metric.label === 'Pedidos finalizados en los últimos 30 días'"
-          type="button" (click)="openCompletedOrders()" aria-haspopup="dialog" aria-label="Ver pedidos completados">
-          <h3>{{ metric.label }}</h3>
-          <p class="metric-value">{{ metric.value | number }}</p>
-        </button>
-        <article class="metric-card" *ngIf="metric.label !== 'Pedidos realizados' && metric.label !== 'Pedidos finalizados en los últimos 30 días'">
-          <h3>{{ metric.label }}</h3>
-          <p class="metric-value">{{ metric.value | number }}</p>
-        </article>
-      </ng-container>
+    <section class="metrics-grid" *ngIf="summary && !isLoading" aria-label="Indicadores principales" aria-live="polite">
+      <article class="metric-card">
+        <h2>Ventas confirmadas</h2>
+        <p class="metric-value" *ngIf="!isLoadingDashboardOrders && !dashboardOrdersError; else revenueUnavailable">{{ confirmedRevenue | currency }}</p>
+        <ng-template #revenueUnavailable>
+          <span class="metric-skeleton" *ngIf="isLoadingDashboardOrders" aria-label="Cargando ventas"></span>
+          <span class="metric-unavailable" *ngIf="!isLoadingDashboardOrders && dashboardOrdersError">No disponible</span>
+        </ng-template>
+        <p class="metric-caption" *ngIf="!dashboardOrdersError">{{ confirmedOrderCount | number }} pedidos con pago registrado</p>
+        <p class="metric-caption" *ngIf="dashboardOrdersError">Revisa el error para volver a intentar</p>
+      </article>
+      <button class="metric-card metric-card-action" type="button" (click)="openPendingOrders()"
+        aria-haspopup="dialog" [attr.aria-label]="'Ver pedidos realizados: ' + (summary.orderPlacedCount | number)">
+        <span class="metric-label">Pedidos realizados</span>
+        <span class="metric-value">{{ summary.orderPlacedCount | number }}</span>
+        <span class="metric-caption">Ver pedidos por gestionar</span>
+      </button>
+      <article class="metric-card">
+        <h2>Carritos activos</h2>
+        <p class="metric-value">{{ summary.cartCount | number }}</p>
+        <p class="metric-caption">Pedidos aún en carrito</p>
+      </article>
+      <button class="metric-card metric-card-action" type="button" (click)="openCompletedOrders()"
+        aria-haspopup="dialog" [attr.aria-label]="'Ver pedidos completados: ' + (summary.completedLast30DaysCount | number)">
+        <span class="metric-label">Pedidos completados</span>
+        <span class="metric-value">{{ summary.completedLast30DaysCount | number }}</span>
+        <span class="metric-caption">Últimos 30 días · Ver pedidos</span>
+      </button>
     </section>
+
+    <section class="dashboard-error dashboard-orders-error" *ngIf="dashboardOrdersError && !isLoadingDashboardOrders"
+      role="alert" aria-labelledby="dashboard-orders-error-title">
+      <div>
+        <h2 id="dashboard-orders-error-title">No pudimos cargar ventas ni pedidos recientes</h2>
+        <p>{{ dashboardOrdersError }}</p>
+      </div>
+      <button class="btn btn-secondary" type="button" (click)="loadDashboardOrders()">Reintentar</button>
+    </section>
+
+    <div class="dashboard-panels">
+      <section class="dashboard-panel revenue-panel" aria-labelledby="revenue-title">
+        <header class="panel-heading">
+          <div>
+            <h2 id="revenue-title">Ingresos confirmados</h2>
+            <p>Últimos 7 días</p>
+          </div>
+          <strong class="panel-total" *ngIf="!isLoadingDashboardOrders">{{ paidRevenueLastSevenDays | currency }}</strong>
+        </header>
+        <div class="chart-loading" *ngIf="isLoadingDashboardOrders" role="status" aria-live="polite">Cargando ingresos…</div>
+        <ng-container *ngIf="!isLoadingDashboardOrders && !dashboardOrdersError">
+          <div class="revenue-chart" role="img" [attr.aria-label]="getRevenueChartDescription()">
+            <div class="chart-column" *ngFor="let day of revenueDays">
+              <span class="chart-bar" [style.height.%]="day.height" aria-hidden="true"></span>
+              <span class="chart-label">{{ day.label }}</span>
+            </div>
+          </div>
+          <p class="chart-empty" *ngIf="paidRevenueLastSevenDays === 0">No hay pagos confirmados en este periodo.</p>
+        </ng-container>
+      </section>
+
+      <section class="dashboard-panel fulfillment-panel" aria-labelledby="fulfillment-title-dashboard">
+        <header class="panel-heading">
+          <div>
+            <h2 id="fulfillment-title-dashboard">Seguimiento de pedidos</h2>
+            <p>Pedidos completados en los últimos 30 días</p>
+          </div>
+        </header>
+        <p class="fulfillment-count" *ngIf="summary && !isLoading">{{ summary.completedLast30DaysCount | number }}</p>
+        <p class="panel-supporting" *ngIf="!summary || isLoading">El resumen de pedidos no está disponible.</p>
+        <p class="panel-supporting">Consulta el detalle para revisar pago, facturación y entrega.</p>
+        <button class="btn btn-secondary panel-action" type="button" (click)="openCompletedOrders()"
+          aria-haspopup="dialog">Ver pedidos completados</button>
+      </section>
+
+      <section class="dashboard-panel recent-orders-panel" aria-labelledby="recent-orders-title">
+        <header class="panel-heading">
+          <div>
+            <h2 id="recent-orders-title">Pedidos recientes</h2>
+            <p>Actividad más reciente registrada</p>
+          </div>
+          <button class="panel-link" type="button" (click)="openPendingOrders()" aria-haspopup="dialog">Ver pedidos por gestionar</button>
+        </header>
+        <div class="table-scroll" *ngIf="!isLoadingDashboardOrders && !dashboardOrdersError && recentDashboardOrders.length; else recentOrdersState">
+          <table class="recent-orders-table">
+            <thead>
+              <tr>
+                <th scope="col">Pedido</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="amount-column">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let order of recentDashboardOrders; trackBy: trackByPendingOrderId">
+                <th scope="row">#{{ order.id }}</th>
+                <td>{{ getCustomerName(order) }}</td>
+                <td>{{ formatOrderDate(order.createdAt) }}</td>
+                <td><span class="order-status" [ngClass]="getOrderStatusClass(order.status)">{{ getOrderStatusLabel(order.status) }}</span></td>
+                <td class="amount-column">{{ getOrderAmount(order) | currency }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #recentOrdersState>
+          <div class="panel-state" *ngIf="isLoadingDashboardOrders" role="status" aria-live="polite" aria-busy="true">Cargando pedidos recientes…</div>
+          <div class="panel-state" *ngIf="!isLoadingDashboardOrders && !dashboardOrdersError">Aún no hay pedidos recientes para mostrar.</div>
+          <div class="panel-state" *ngIf="dashboardOrdersError">Los pedidos recientes no están disponibles.</div>
+        </ng-template>
+      </section>
+
+      <section class="dashboard-panel analytics-panel" aria-labelledby="analytics-title">
+        <header class="panel-heading">
+          <div>
+            <h2 id="analytics-title">Analítica adicional</h2>
+            <p>Indicadores pendientes de integración</p>
+          </div>
+        </header>
+        <ul class="analytics-list">
+          <li>Visitas y tasa de conversión</li>
+          <li>Ventas por categoría y origen de tráfico</li>
+          <li>Actividad reciente y metas mensuales</li>
+        </ul>
+        <p class="analytics-note">Estos datos requieren eventos de analítica y un endpoint de resumen que aún no están disponibles.</p>
+      </section>
+    </div>
   </main>
 
   <dialog #pendingOrdersDialog class="pending-orders-dialog" aria-labelledby="pending-orders-title"
