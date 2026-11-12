@@ -76,7 +76,7 @@ describe('DashboardComponent', () => {
     expect(component.summary?.completedLast30DaysCount).toBe(5);
   });
 
-  it('derives confirmed revenue and recent dashboard orders from admin orders', () => {
+  it('uses server analytics for confirmed revenue and retains recent admin orders', () => {
     const today = new Date();
     const paidAt = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12).toISOString();
     const orderService = {
@@ -98,6 +98,19 @@ describe('DashboardComponent', () => {
     );
 
     component.loadDashboardOrders();
+    const dates = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + index);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    });
+    component.analytics = {
+      period: { from: dates[0], to: dates[6], timezone: 'America/Montevideo' },
+      sales: { currency: 'UYU', confirmedRevenue: 100, paidOrderCount: 2 },
+      revenueByDay: dates.map((date, index) => ({ date, revenue: index === 6 ? 100 : 0, paidOrderCount: index === 6 ? 2 : 0 })),
+      monthlyTarget: { amount: null, achievedAmount: 100, completionPercent: null },
+      categorySales: [],
+      activeUsersByCountry: [],
+      recentActivity: []
+    };
 
     expect(component.confirmedRevenue).toBe(100);
     expect(component.confirmedOrderCount).toBe(2);

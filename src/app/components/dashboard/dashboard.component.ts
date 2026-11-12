@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subject, takeUntil } from 'rxjs';
+import { Observable, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { AdminDashboardSummary, AdminOrder, OrderService } from '../../services/order.service';
+import { AdminDashboardData, AnalyticsService, BusinessSettingResponse } from '../../services/analytics.service';
 import { OrderFulfillmentUpdateDto, OrderPaymentStatus } from '../../services/models/order.model';
 
 interface RevenueDay {
@@ -27,15 +28,32 @@ interface AdminFulfillmentForm {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css']
+  styleUrls: ['./dashboard.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   @ViewChild('pendingOrdersDialog') private pendingOrdersDialog?: ElementRef<HTMLDialogElement>;
 
   summary: AdminDashboardSummary | null = null;
+  private analyticsData: AdminDashboardData | null = null;
+  analyticsFrom = this.getDateKey(new Date(Date.now() - 6 * 86_400_000));
+  analyticsTo = this.getDateKey(new Date());
+  isLoadingAnalytics = false;
+  analyticsError: string | null = null;
+  monthlyTargetInput = '';
+  timezoneInput = 'America/Montevideo';
+  isLoadingSettings = false;
+  isSettingsLoaded = false;
+  isSavingSettings = false;
+  savingSetting: 'target' | 'timezone' | null = null;
+  settingsError: string | null = null;
+  settingsMessage: string | null = null;
   isLoading = true;
   error: string | null = null;
   dashboardOrders: AdminOrder[] = [];
+  recentDashboardOrders: AdminOrder[] = [];
+  revenueDays: RevenueDay[] = [];
+  private revenueChartDescription = 'Ingresos confirmados del periodo seleccionado.';
   isLoadingDashboardOrders = true;
   dashboardOrdersError: string | null = null;
   pendingOrders: AdminOrder[] = [];
@@ -52,15 +70,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
+  get analytics(): AdminDashboardData | null {
+    return this.analyticsData;
+  }
+
+  set analytics(value: AdminDashboardData | null) {
+    this.analyticsData = value;
+    this.revenueDays = value ? this.buildRevenueDays(value.revenueByDay) : [];
+    this.revenueChartDescription = value
+      ? this.buildRevenueChartDescription(value)
+      : 'Ingresos confirmados del periodo seleccionado.';
+  }
+
   constructor(
     private readonly router: Router,
     private readonly authService: AuthService,
-    private readonly orderService: OrderService
+    private readonly orderService: OrderService,
+    readonly analyticsService?: AnalyticsService,
+    private readonly changeDetector?: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadSummary();
     this.loadDashboardOrders();
+    if (this.analyticsService) {
+      this.loadAnalytics();
+    }
   }
 
   ngOnDestroy(): void {
@@ -89,13 +124,160 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.summary = counts;
           }
           this.isLoading = false;
+          this.changeDetector?.markForCheck();
         },
         error: error => {
           this.summary = null;
           this.error = error?.error?.message || 'No se pudieron cargar los indicadores de pedidos.';
           this.isLoading = false;
+          this.changeDetector?.markForCheck();
         }
       });
+  }
+
+  loadAnalytics(): void {
+    if (!this.analyticsService) return;
+    this.isLoadingAnalytics = true;
+    this.analyticsError = null;
+    this.analyticsService.getAdminDashboard(this.analyticsFrom, this.analyticsTo)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          if (!response.success || !response.data) {
+            this.analyticsError = response.message || 'La respuesta de analítica no es válida.';
+          } else {
+            this.analytics = response.data;
+          }
+          this.isLoadingAnalytics = false;
+          this.changeDetector?.markForCheck();
+        },
+        error: error => {
+          this.analyticsError = this.getAnalyticsErrorMessage(error);
+          this.isLoadingAnalytics = false;
+          if (error?.status === 401) this.authService.loginWithGoogle();
+          this.changeDetector?.markForCheck();
+        }
+      });
+  }
+
+  setAnalyticsDate(field: 'from' | 'to', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    if (field === 'from') this.analyticsFrom = value;
+    else this.analyticsTo = value;
+  }
+
+  loadBusinessSettings(): void {
+    if (!this.analyticsService) return;
+    this.isLoadingSettings = true;
+    this.settingsError = null;
+    let responsesReceived = 0;
+    const finish = (): void => {
+      responsesReceived += 1;
+      if (responsesReceived === 2) {
+        this.isLoadingSettings = false;
+        this.isSettingsLoaded = true;
+      }
+    };
+
+    this.analyticsService.getMonthlySalesTarget().pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
+        if (response.success && response.data) {
+          this.monthlyTargetInput = response.data.value === null ? '' : String(response.data.value);
+        } else {
+          this.settingsError = response.message || 'No se pudo consultar la meta mensual.';
+        }
+        finish();
+        this.changeDetector?.markForCheck();
+      },
+      error: error => {
+        this.settingsError = this.getSettingsErrorMessage(error);
+        finish();
+        this.changeDetector?.markForCheck();
+      }
+    });
+    this.analyticsService.getTimezone().pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
+        if (response.success && response.data) this.timezoneInput = response.data.value;
+        else this.settingsError = response.message || 'No se pudo consultar la zona horaria.';
+        finish();
+        this.changeDetector?.markForCheck();
+      },
+      error: error => {
+        this.settingsError = this.getSettingsErrorMessage(error);
+        finish();
+        this.changeDetector?.markForCheck();
+      }
+    });
+  }
+
+  onSettingsToggle(event: Event): void {
+    const details = event.currentTarget as HTMLDetailsElement;
+    if (details.open && !this.isSettingsLoaded && !this.isLoadingSettings) this.loadBusinessSettings();
+  }
+
+  saveMonthlyTarget(): void {
+    const amount = Number(this.monthlyTargetInput);
+    if (!this.analyticsService || !this.monthlyTargetInput.trim() || !Number.isFinite(amount) || amount < 0) {
+      this.settingsError = 'Ingresa una meta válida igual o mayor que cero.';
+      this.settingsMessage = null;
+      return;
+    }
+    this.saveSetting(this.analyticsService.updateMonthlySalesTarget(amount), 'Se guardó la meta mensual.', 'target');
+  }
+
+  saveTimezone(): void {
+    if (!this.analyticsService) return;
+    this.saveSetting(this.analyticsService.updateTimezone(this.timezoneInput), 'Se guardó la zona horaria.', 'timezone');
+  }
+
+  private saveSetting<T>(
+    request: Observable<BusinessSettingResponse<T>>,
+    successMessage: string,
+    setting: 'target' | 'timezone'
+  ): void {
+    this.isSavingSettings = true;
+    this.savingSetting = setting;
+    this.settingsError = null;
+    this.settingsMessage = null;
+    request.pipe(takeUntil(this.destroy$)).subscribe({
+      next: response => {
+        if (response.success) {
+          this.settingsMessage = successMessage;
+          if (response.data) {
+            if (setting === 'target') this.monthlyTargetInput = String(response.data.value ?? '');
+            else this.timezoneInput = String(response.data.value ?? '');
+          }
+          this.loadAnalytics();
+        } else {
+          this.settingsError = response.message || 'No se pudo guardar la configuración.';
+        }
+        this.isSavingSettings = false;
+        this.savingSetting = null;
+        this.changeDetector?.markForCheck();
+      },
+      error: error => {
+        this.settingsError = this.getSettingsErrorMessage(error);
+        this.isSavingSettings = false;
+        this.savingSetting = null;
+        this.changeDetector?.markForCheck();
+      }
+    });
+  }
+
+  private getAnalyticsErrorMessage(error: any): string {
+    switch (error?.status) {
+      case 400: return 'Revisa las fechas: el periodo debe ser válido y no superar los 366 días.';
+      case 403: return 'Tu cuenta no tiene permisos de administrador para consultar estas métricas.';
+      case 500: return 'Ocurrió un error inesperado al cargar las métricas. Inténtalo nuevamente.';
+      default: return error?.message || 'No se pudieron cargar las métricas. Inténtalo nuevamente.';
+    }
+  }
+
+  private getSettingsErrorMessage(error: any): string {
+    if (error?.status === 401) return 'Tu sesión expiró. Inicia sesión nuevamente.';
+    if (error?.status === 403) return 'Tu cuenta no tiene permisos de administrador para cambiar la configuración.';
+    if (error?.status === 400) return 'Revisa el valor ingresado e inténtalo nuevamente.';
+    return 'No se pudo guardar o consultar la configuración. Inténtalo nuevamente.';
   }
 
   loadDashboardOrders(): void {
@@ -107,72 +289,63 @@ export class DashboardComponent implements OnInit, OnDestroy {
         next: response => {
           if (!response.success || !Array.isArray(response.data)) {
             this.dashboardOrders = [];
+            this.recentDashboardOrders = [];
             this.dashboardOrdersError = response.message || 'La respuesta de pedidos no es válida.';
           } else {
             this.dashboardOrders = response.data;
+            this.recentDashboardOrders = this.buildRecentDashboardOrders(response.data);
           }
           this.isLoadingDashboardOrders = false;
+          this.changeDetector?.markForCheck();
         },
         error: error => {
-          this.dashboardOrders = [];
           this.dashboardOrdersError = this.getPendingOrdersErrorMessage(error);
           this.isLoadingDashboardOrders = false;
+          this.changeDetector?.markForCheck();
         }
       });
   }
 
   get confirmedRevenue(): number {
-    return this.dashboardOrders
-      .filter(order => this.isRevenueConfirmed(order))
-      .reduce((total, order) => total + this.getOrderAmount(order), 0);
+    return this.analytics?.sales.confirmedRevenue ?? 0;
   }
 
   get confirmedOrderCount(): number {
-    return this.dashboardOrders.filter(order => this.isRevenueConfirmed(order)).length;
+    return this.analytics?.sales.paidOrderCount ?? 0;
   }
 
-  get recentDashboardOrders(): AdminOrder[] {
-    return this.dashboardOrders
+  private buildRecentDashboardOrders(orders: AdminOrder[]): AdminOrder[] {
+    return orders
       .filter(order => !['cart', 'cancelled'].includes(order.status.toLowerCase()))
       .slice()
       .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
       .slice(0, 5);
   }
 
-  get revenueDays(): RevenueDay[] {
-    const today = new Date();
-    const days = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + index);
-      return { date, key: this.getLocalDateKey(date), value: 0 };
+  private buildRevenueDays(dailyValues: AdminDashboardData['revenueByDay']): RevenueDay[] {
+    const maximum = Math.max(0, ...dailyValues.map(day => day.revenue));
+    return dailyValues.map(day => {
+      const date = new Date(`${day.date}T12:00:00.000Z`);
+      return {
+        date: day.date,
+        label: date.toLocaleDateString('es-UY', { weekday: 'short', timeZone: 'UTC' }),
+        value: day.revenue,
+        height: maximum ? (day.revenue / maximum) * 100 : 0
+      };
     });
-    const totals = new Map(days.map(day => [day.key, day.value]));
-
-    this.dashboardOrders
-      .filter(order => this.isRevenueConfirmed(order))
-      .forEach(order => {
-        const paidDate = order.paidAt || order.completedAt || order.createdAt;
-        const date = new Date(paidDate);
-        if (Number.isNaN(date.getTime())) return;
-        const key = this.getLocalDateKey(date);
-        if (totals.has(key)) totals.set(key, (totals.get(key) || 0) + this.getOrderAmount(order));
-      });
-
-    const maximum = Math.max(0, ...totals.values());
-    return days.map(day => ({
-      date: day.key,
-      label: day.date.toLocaleDateString('es', { weekday: 'short' }),
-      value: totals.get(day.key) || 0,
-      height: maximum ? ((totals.get(day.key) || 0) / maximum) * 100 : 0
-    }));
   }
 
   get paidRevenueLastSevenDays(): number {
-    return this.revenueDays.reduce((total, day) => total + day.value, 0);
+    return this.analytics?.sales.confirmedRevenue ?? 0;
+  }
+
+  private buildRevenueChartDescription(analytics: AdminDashboardData): string {
+    const dailyValues = analytics.revenueByDay.map(day => `${day.date}: ${day.revenue}`).join(', ');
+    return `Ingresos confirmados del ${analytics.period.from} al ${analytics.period.to}. Total: ${analytics.sales.confirmedRevenue}. ${dailyValues}`;
   }
 
   getRevenueChartDescription(): string {
-    const dailyValues = this.revenueDays.map(day => `${day.label}: ${day.value}`).join(', ');
-    return `Ingresos confirmados durante los últimos siete días. Total: ${this.paidRevenueLastSevenDays}. ${dailyValues}`;
+    return this.revenueChartDescription;
   }
 
   getOrderAmount(order: AdminOrder): number {
@@ -190,16 +363,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return 'status-progress';
   }
 
-  private getLocalDateKey(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private isRevenueConfirmed(order: AdminOrder): boolean {
-    const status = order.status.trim().toLowerCase();
-    return order.paymentStatus === 'paid' && status !== 'cancelled' && status !== 'canceled';
+  private getDateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   openPendingOrders(): void {
@@ -238,11 +403,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
             );
           }
           this.isLoadingPendingOrders = false;
+          this.changeDetector?.markForCheck();
         },
         error: error => {
           this.pendingOrders = [];
           this.pendingOrdersError = this.getPendingOrdersErrorMessage(error);
           this.isLoadingPendingOrders = false;
+          this.changeDetector?.markForCheck();
         }
       });
   }
@@ -393,12 +560,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.loadDashboardOrders();
           }
           this.isUpdatingFulfillment = false;
+          this.changeDetector?.markForCheck();
         },
         error: error => {
           this.fulfillmentError = error?.status === 409
             ? error?.error?.message || 'El pedido cambió en el servidor. Actualiza los datos e inténtalo nuevamente.'
             : error?.error?.message || 'No se pudo actualizar el pedido. Inténtalo nuevamente.';
           this.isUpdatingFulfillment = false;
+          this.changeDetector?.markForCheck();
         }
       });
   }
@@ -486,6 +655,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   trackByPendingOrderId(index: number, order: AdminOrder): number {
     return order.id;
+  }
+
+  trackByCategoryId(index: number, category: AdminDashboardData['categorySales'][number]): number {
+    return category.categoryId;
+  }
+
+  trackByRevenueDate(index: number, day: RevenueDay): string {
+    return day.date;
+  }
+
+  trackByCountry(index: number, country: AdminDashboardData['activeUsersByCountry'][number]): string {
+    return country.country || `unknown-${index}`;
+  }
+
+  trackByActivityId(index: number, activity: AdminDashboardData['recentActivity'][number]): string {
+    return activity.id;
   }
 
   isLoggedIn(): boolean {

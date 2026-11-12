@@ -34,13 +34,40 @@
         <h1 class="dashboard-title" id="dashboard-title">Panel de control</h1>
         <p>Resumen de ventas y actividad de pedidos</p>
       </div>
-      <button class="btn btn-secondary dashboard-refresh" type="button" (click)="loadSummary(); loadDashboardOrders()"
-        [disabled]="isLoading || isLoadingDashboardOrders" [attr.aria-busy]="isLoading || isLoadingDashboardOrders">
-        {{ isLoading || isLoadingDashboardOrders ? 'Actualizando…' : 'Actualizar datos' }}
+      <button class="btn btn-secondary dashboard-refresh" type="button" (click)="loadSummary(); loadDashboardOrders(); loadAnalytics()"
+        [disabled]="isLoading || isLoadingDashboardOrders || isLoadingAnalytics" [attr.aria-busy]="isLoading || isLoadingDashboardOrders || isLoadingAnalytics">
+        <span class="loading-spinner" *ngIf="isLoading || isLoadingDashboardOrders || isLoadingAnalytics" aria-hidden="true"></span>
+        {{ isLoading || isLoadingDashboardOrders || isLoadingAnalytics ? 'Actualizando…' : 'Actualizar datos' }}
       </button>
     </header>
 
-    <div class="dashboard-loading" *ngIf="isLoading && !summary" role="status" aria-live="polite" aria-busy="true">
+    <form class="analytics-range" (submit)="$event.preventDefault(); loadAnalytics()" aria-label="Periodo de métricas">
+      <label>
+        Desde
+        <input type="date" [value]="analyticsFrom" (change)="setAnalyticsDate('from', $event)" required>
+      </label>
+      <label>
+        Hasta
+        <input type="date" [value]="analyticsTo" (change)="setAnalyticsDate('to', $event)" required>
+      </label>
+      <button class="btn btn-secondary" type="submit" [disabled]="isLoadingAnalytics" [attr.aria-busy]="isLoadingAnalytics">
+        <span class="loading-spinner" *ngIf="isLoadingAnalytics" aria-hidden="true"></span>
+        Consultar periodo
+      </button>
+    </form>
+
+    <div class="loading-status" *ngIf="isLoadingAnalytics" role="status" aria-live="polite" aria-busy="true">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      {{ analytics ? 'Actualizando métricas; los datos anteriores siguen disponibles.' : 'Cargando métricas del periodo…' }}
+    </div>
+    <section class="dashboard-error" *ngIf="analyticsError && !isLoadingAnalytics" role="alert" aria-labelledby="analytics-error-title">
+      <h2 id="analytics-error-title">No pudimos cargar las métricas</h2>
+      <p>{{ analyticsError }}</p>
+      <button class="btn btn-secondary" type="button" (click)="loadAnalytics()">Reintentar</button>
+    </section>
+
+    <div class="loading-status" *ngIf="isLoading && !summary" role="status" aria-live="polite" aria-busy="true">
+      <span class="loading-spinner" aria-hidden="true"></span>
       Cargando indicadores de pedidos…
     </div>
 
@@ -50,16 +77,11 @@
       <button class="btn btn-secondary" type="button" (click)="loadSummary()">Reintentar</button>
     </section>
 
-    <section class="metrics-grid" *ngIf="summary && !isLoading" aria-label="Indicadores principales" aria-live="polite">
-      <article class="metric-card">
+    <section class="metrics-grid" *ngIf="summary" aria-label="Indicadores principales" aria-live="polite">
+      <article class="metric-card" *ngIf="analytics">
         <h2>Ventas confirmadas</h2>
-        <p class="metric-value" *ngIf="!isLoadingDashboardOrders && !dashboardOrdersError; else revenueUnavailable">{{ confirmedRevenue | currency }}</p>
-        <ng-template #revenueUnavailable>
-          <span class="metric-skeleton" *ngIf="isLoadingDashboardOrders" aria-label="Cargando ventas"></span>
-          <span class="metric-unavailable" *ngIf="!isLoadingDashboardOrders && dashboardOrdersError">No disponible</span>
-        </ng-template>
-        <p class="metric-caption" *ngIf="!dashboardOrdersError">Histórico · {{ confirmedOrderCount | number }} pedidos pagados</p>
-        <p class="metric-caption" *ngIf="dashboardOrdersError">Revisa el error para volver a intentar</p>
+        <p class="metric-value">{{ analytics.sales.confirmedRevenue | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</p>
+        <p class="metric-caption">{{ analytics.sales.paidOrderCount | number }} pedidos pagados · {{ analytics.period.from }} a {{ analytics.period.to }}</p>
       </article>
       <button class="metric-card metric-card-action" type="button" (click)="openPendingOrders()"
         aria-haspopup="dialog" [attr.aria-label]="'Ver pedidos por gestionar: ' + (summary.orderPlacedCount | number)">
@@ -89,19 +111,23 @@
         <header class="panel-heading">
           <div>
             <h2 id="revenue-title">Ingresos confirmados</h2>
-            <p>Últimos 7 días</p>
+            <p>{{ analytics?.period?.from || analyticsFrom }} a {{ analytics?.period?.to || analyticsTo }}</p>
           </div>
-          <strong class="panel-total" *ngIf="!isLoadingDashboardOrders">{{ paidRevenueLastSevenDays | currency }}</strong>
+          <strong class="panel-total" *ngIf="analytics && !isLoadingAnalytics">{{ analytics.sales.confirmedRevenue | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</strong>
         </header>
-        <div class="chart-loading" *ngIf="isLoadingDashboardOrders" role="status" aria-live="polite">Cargando ingresos…</div>
-        <ng-container *ngIf="!isLoadingDashboardOrders && !dashboardOrdersError">
-          <div class="revenue-chart" role="img" [attr.aria-label]="getRevenueChartDescription()">
-            <div class="chart-column" *ngFor="let day of revenueDays">
-              <span class="chart-bar" [style.height.%]="day.height" aria-hidden="true"></span>
-              <span class="chart-label">{{ day.label }}</span>
+        <div class="chart-loading" *ngIf="!analytics && isLoadingAnalytics" role="status" aria-live="polite">
+          <span class="loading-spinner" aria-hidden="true"></span> Cargando ingresos…
+        </div>
+        <ng-container *ngIf="analytics">
+          <div class="revenue-chart-scroll" tabindex="0" aria-label="Gráfico de ingresos diarios; desplázate horizontalmente para explorar todos los días">
+            <div class="revenue-chart" role="img" [attr.aria-label]="getRevenueChartDescription()">
+              <div class="chart-column" *ngFor="let day of revenueDays; trackBy: trackByRevenueDate">
+                <span class="chart-bar" [style.height.%]="day.height" aria-hidden="true"></span>
+                <span class="chart-label" [title]="day.date">{{ day.label }} {{ day.date.slice(8) }}</span>
+              </div>
             </div>
           </div>
-          <p class="chart-empty" *ngIf="paidRevenueLastSevenDays === 0">No hay pagos confirmados en este periodo.</p>
+          <p class="chart-empty" *ngIf="analytics.sales.confirmedRevenue === 0">No hay pagos confirmados en este periodo.</p>
         </ng-container>
       </section>
 
@@ -113,7 +139,7 @@
           </div>
           <button class="panel-link" type="button" (click)="openPendingOrders()" aria-haspopup="dialog">Ver pedidos por gestionar</button>
         </header>
-        <div class="table-scroll" *ngIf="!isLoadingDashboardOrders && !dashboardOrdersError && recentDashboardOrders.length; else recentOrdersState">
+        <div class="table-scroll" *ngIf="recentDashboardOrders.length; else recentOrdersState">
           <table class="recent-orders-table">
             <thead>
               <tr>
@@ -130,7 +156,7 @@
                 <td>{{ getCustomerName(order) }}</td>
                 <td>{{ formatOrderDate(order.createdAt) }}</td>
                 <td><span class="order-status" [ngClass]="getOrderStatusClass(order.status)">{{ getOrderStatusLabel(order.status) }}</span></td>
-                <td class="amount-column">{{ getOrderAmount(order) | currency }}</td>
+                <td class="amount-column">{{ getOrderAmount(order) | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</td>
               </tr>
             </tbody>
           </table>
@@ -142,52 +168,93 @@
         </ng-template>
       </section>
 
-      <section class="analytics-section" aria-labelledby="analytics-title">
+      <section class="analytics-section" aria-labelledby="analytics-title" *ngIf="analytics">
         <header class="panel-heading">
           <div>
-            <h2 id="analytics-title">Métricas para activar</h2>
-            <p>Estas tarjetas se habilitarán cuando la tienda empiece a recopilar estos datos.</p>
+            <h2 id="analytics-title">Rendimiento de la tienda</h2>
+            <p>Datos confirmados para el periodo seleccionado · zona {{ analytics.period.timezone }}</p>
           </div>
         </header>
         <div class="analytics-grid">
           <article class="analytics-card">
-            <h3>Visitantes únicos</h3>
-            <p>Personas que visitan la tienda durante el periodo seleccionado.</p>
-            <span class="analytics-status">Pendiente de recopilación</span>
-          </article>
-          <article class="analytics-card">
-            <h3>Tasa de conversión</h3>
-            <p>Proporción de visitantes que completan una compra.</p>
-            <span class="analytics-status">Pendiente de recopilación</span>
-          </article>
-          <article class="analytics-card">
             <h3>Ventas por categoría</h3>
-            <p>Ingresos y unidades vendidas en cada categoría de productos.</p>
-            <span class="analytics-status">Pendiente de clasificación</span>
+            <ul class="analytics-list" *ngIf="analytics.categorySales.length; else noCategorySales">
+              <li *ngFor="let category of analytics.categorySales; trackBy: trackByCategoryId">
+                <span>{{ category.categoryName }} · {{ category.unitsSold }} unidades · {{ category.sharePercent | number:'1.0-2' }}%</span>
+                <strong>{{ category.revenue | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</strong>
+              </li>
+            </ul>
+            <ng-template #noCategorySales><p>No hay ventas por categoría en este periodo.</p></ng-template>
           </article>
           <article class="analytics-card">
             <h3>Meta mensual</h3>
-            <p>Avance de ventas respecto a la meta configurada para el mes.</p>
-            <span class="analytics-status">Pendiente de configuración</span>
+            <p *ngIf="analytics.monthlyTarget.amount !== null; else noMonthlyTarget">
+              {{ analytics.monthlyTarget.achievedAmount | currency:'UYU':'symbol':'1.0-2':'es-UY' }} de
+              {{ analytics.monthlyTarget.amount | currency:'UYU':'symbol':'1.0-2':'es-UY' }}
+              · {{ analytics.monthlyTarget.completionPercent | number:'1.0-2' }}%
+            </p>
+            <ng-template #noMonthlyTarget><p>Meta no configurada.</p></ng-template>
           </article>
           <article class="analytics-card">
             <h3>Clientes activos por país</h3>
-            <p>Clientes únicos activos, agrupados por ubicación.</p>
-            <span class="analytics-status">Pendiente de recopilación</span>
-          </article>
-          <article class="analytics-card">
-            <h3>Fuentes de tráfico</h3>
-            <p>Visitas que llegan desde búsqueda, redes y campañas.</p>
-            <span class="analytics-status">Pendiente de recopilación</span>
+            <ul class="analytics-list" *ngIf="analytics.activeUsersByCountry.length; else noActiveUsers">
+              <li *ngFor="let country of analytics.activeUsersByCountry; trackBy: trackByCountry">
+                <span>{{ country.country || 'País no disponible' }} · {{ country.sharePercent | number:'1.0-2' }}%</span>
+                <strong>{{ country.userCount | number }}</strong>
+              </li>
+            </ul>
+            <ng-template #noActiveUsers><p>No hay clientes activos en este periodo.</p></ng-template>
           </article>
           <article class="analytics-card">
             <h3>Actividad de la tienda</h3>
-            <p>Eventos como nuevos pedidos, reseñas y cambios de inventario.</p>
-            <span class="analytics-status">Pendiente de instrumentación</span>
+            <ul class="analytics-list" *ngIf="analytics.recentActivity.length; else noRecentActivity">
+              <li *ngFor="let activity of analytics.recentActivity; trackBy: trackByActivityId">
+                <span>{{ activity.description }} · {{ formatOrderDate(activity.createdAt) }}</span>
+                <strong>{{ activity.actorName || 'Sistema o cliente' }}</strong>
+              </li>
+            </ul>
+            <ng-template #noRecentActivity><p>No hay actividad registrada en este periodo.</p></ng-template>
           </article>
         </div>
-        <p class="analytics-note">No se muestran cifras estimadas: estas métricas aún no se recopilan.</p>
+        <p class="analytics-note">Visitantes únicos, conversión y fuentes de tráfico no están disponibles en esta versión y no se estiman.</p>
       </section>
+
+      <details class="dashboard-panel settings-panel" *ngIf="analyticsService" (toggle)="onSettingsToggle($event)">
+        <summary class="settings-summary">
+          <span>
+            <strong id="settings-title">Configuración del dashboard</strong>
+            <span>Los cambios afectan las consultas futuras; los rangos existentes no se reinterpretan.</span>
+          </span>
+        </summary>
+        <div class="loading-status settings-loading" *ngIf="isLoadingSettings" role="status" aria-live="polite" aria-busy="true">
+          <span class="loading-spinner" aria-hidden="true"></span>
+          Cargando configuración…
+        </div>
+        <button class="panel-link settings-retry" type="button" *ngIf="settingsError && !isLoadingSettings"
+          (click)="loadBusinessSettings()">Volver a consultar configuración</button>
+        <div class="settings-fields" [attr.aria-busy]="isLoadingSettings || isSavingSettings">
+          <form (submit)="$event.preventDefault(); saveMonthlyTarget()">
+            <label for="monthly-target">Meta mensual (UYU)</label>
+            <input id="monthly-target" class="setting-control" type="number" min="0" step="0.01"
+              [value]="monthlyTargetInput" (input)="monthlyTargetInput = $any($event.target).value" required>
+            <button class="btn btn-secondary" type="submit" [disabled]="isSavingSettings || isLoadingSettings" [attr.aria-busy]="savingSetting === 'target'">
+              <span class="loading-spinner" *ngIf="savingSetting === 'target'" aria-hidden="true"></span>
+              {{ savingSetting === 'target' ? 'Guardando…' : 'Guardar meta' }}
+            </button>
+          </form>
+          <form (submit)="$event.preventDefault(); saveTimezone()">
+            <label for="dashboard-timezone">Zona horaria (IANA)</label>
+            <input id="dashboard-timezone" class="setting-control" type="text" [value]="timezoneInput"
+              (input)="timezoneInput = $any($event.target).value" required autocomplete="off">
+            <button class="btn btn-secondary" type="submit" [disabled]="isSavingSettings || isLoadingSettings" [attr.aria-busy]="savingSetting === 'timezone'">
+              <span class="loading-spinner" *ngIf="savingSetting === 'timezone'" aria-hidden="true"></span>
+              {{ savingSetting === 'timezone' ? 'Guardando…' : 'Guardar zona horaria' }}
+            </button>
+          </form>
+        </div>
+        <p class="settings-feedback settings-error" *ngIf="settingsError" role="alert">{{ settingsError }}</p>
+        <p class="settings-feedback settings-success" *ngIf="settingsMessage" role="status">{{ settingsMessage }}</p>
+      </details>
     </div>
   </main>
 
@@ -206,6 +273,7 @@
 
     <div class="pending-orders-body">
       <div class="dashboard-loading" *ngIf="isLoadingPendingOrders" role="status" aria-live="polite" aria-busy="true">
+        <span class="loading-spinner" aria-hidden="true"></span>
         {{ isViewingCompletedOrders ? 'Cargando pedidos completados...' : 'Cargando pedidos pendientes...' }}
       </div>
 
@@ -228,7 +296,7 @@
             </div>
             <div>
               <span class="detail-label">Total</span>
-              <strong>{{ order.total | currency }}</strong>
+              <strong>{{ order.total | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</strong>
             </div>
             <div>
               <span class="detail-label">Estado del pedido</span>
@@ -281,8 +349,8 @@
                   <tr *ngFor="let item of order.items">
                     <th scope="row">{{ item.product?.name || 'Producto #' + item.productId }}</th>
                     <td>{{ item.quantity }}</td>
-                    <td class="amount-column">{{ item.price | currency }}</td>
-                    <td class="amount-column">{{ getOrderItemTotal(item) | currency }}</td>
+                    <td class="amount-column">{{ item.price | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</td>
+                    <td class="amount-column">{{ getOrderItemTotal(item) | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -366,7 +434,7 @@
         <ng-template #pendingOrdersList>
           <div class="pending-orders-total" *ngIf="displayedOrders.length">
             <span>{{ isViewingCompletedOrders ? 'Importe total de pedidos completados' : 'Importe total de pedidos por gestionar' }}</span>
-            <strong>{{ displayedOrdersTotal | currency }}</strong>
+            <strong>{{ displayedOrdersTotal | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</strong>
           </div>
 
           <div class="pending-orders-table-wrap" *ngIf="displayedOrders.length; else noPendingOrders">
@@ -391,7 +459,7 @@
                   <td>{{ order.billingAddress?.company || '—' }}</td>
                   <td>{{ order.billingAddress?.phone || 'No registrado' }}</td>
                   <td>{{ formatOrderDate(order.createdAt) }}</td>
-                  <td class="amount-column">{{ order.total | currency }}</td>
+                  <td class="amount-column">{{ order.total | currency:'UYU':'symbol':'1.0-2':'es-UY' }}</td>
                 </tr>
               </tbody>
             </table>
