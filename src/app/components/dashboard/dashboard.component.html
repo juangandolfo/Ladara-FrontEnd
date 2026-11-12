@@ -58,25 +58,20 @@
           <span class="metric-skeleton" *ngIf="isLoadingDashboardOrders" aria-label="Cargando ventas"></span>
           <span class="metric-unavailable" *ngIf="!isLoadingDashboardOrders && dashboardOrdersError">No disponible</span>
         </ng-template>
-        <p class="metric-caption" *ngIf="!dashboardOrdersError">{{ confirmedOrderCount | number }} pedidos con pago registrado</p>
+        <p class="metric-caption" *ngIf="!dashboardOrdersError">Histórico · {{ confirmedOrderCount | number }} pedidos pagados</p>
         <p class="metric-caption" *ngIf="dashboardOrdersError">Revisa el error para volver a intentar</p>
       </article>
       <button class="metric-card metric-card-action" type="button" (click)="openPendingOrders()"
-        aria-haspopup="dialog" [attr.aria-label]="'Ver pedidos realizados: ' + (summary.orderPlacedCount | number)">
-        <span class="metric-label">Pedidos realizados</span>
+        aria-haspopup="dialog" [attr.aria-label]="'Ver pedidos por gestionar: ' + (summary.orderPlacedCount | number)">
+        <span class="metric-label">Pedidos por gestionar</span>
         <span class="metric-value">{{ summary.orderPlacedCount | number }}</span>
-        <span class="metric-caption">Ver pedidos por gestionar</span>
+        <span class="metric-caption">Pedidos realizados pendientes de gestión</span>
       </button>
-      <article class="metric-card">
-        <h2>Carritos activos</h2>
-        <p class="metric-value">{{ summary.cartCount | number }}</p>
-        <p class="metric-caption">Pedidos aún en carrito</p>
-      </article>
       <button class="metric-card metric-card-action" type="button" (click)="openCompletedOrders()"
-        aria-haspopup="dialog" [attr.aria-label]="'Ver pedidos completados: ' + (summary.completedLast30DaysCount | number)">
-        <span class="metric-label">Pedidos completados</span>
+        aria-haspopup="dialog" [attr.aria-label]="'Ver pedidos completados en los últimos 30 días: ' + (summary.completedLast30DaysCount | number)">
+        <span class="metric-label">Pedidos completados · 30 días</span>
         <span class="metric-value">{{ summary.completedLast30DaysCount | number }}</span>
-        <span class="metric-caption">Últimos 30 días · Ver pedidos</span>
+        <span class="metric-caption">Ver el listado de pedidos completados</span>
       </button>
     </section>
 
@@ -108,20 +103,6 @@
           </div>
           <p class="chart-empty" *ngIf="paidRevenueLastSevenDays === 0">No hay pagos confirmados en este periodo.</p>
         </ng-container>
-      </section>
-
-      <section class="dashboard-panel fulfillment-panel" aria-labelledby="fulfillment-title-dashboard">
-        <header class="panel-heading">
-          <div>
-            <h2 id="fulfillment-title-dashboard">Seguimiento de pedidos</h2>
-            <p>Pedidos completados en los últimos 30 días</p>
-          </div>
-        </header>
-        <p class="fulfillment-count" *ngIf="summary && !isLoading">{{ summary.completedLast30DaysCount | number }}</p>
-        <p class="panel-supporting" *ngIf="!summary || isLoading">El resumen de pedidos no está disponible.</p>
-        <p class="panel-supporting">Consulta el detalle para revisar pago, facturación y entrega.</p>
-        <button class="btn btn-secondary panel-action" type="button" (click)="openCompletedOrders()"
-          aria-haspopup="dialog">Ver pedidos completados</button>
       </section>
 
       <section class="dashboard-panel recent-orders-panel" aria-labelledby="recent-orders-title">
@@ -161,19 +142,51 @@
         </ng-template>
       </section>
 
-      <section class="dashboard-panel analytics-panel" aria-labelledby="analytics-title">
+      <section class="analytics-section" aria-labelledby="analytics-title">
         <header class="panel-heading">
           <div>
-            <h2 id="analytics-title">Analítica adicional</h2>
-            <p>Indicadores pendientes de integración</p>
+            <h2 id="analytics-title">Métricas para activar</h2>
+            <p>Estas tarjetas se habilitarán cuando la tienda empiece a recopilar estos datos.</p>
           </div>
         </header>
-        <ul class="analytics-list">
-          <li>Visitas y tasa de conversión</li>
-          <li>Ventas por categoría y origen de tráfico</li>
-          <li>Actividad reciente y metas mensuales</li>
-        </ul>
-        <p class="analytics-note">Estos datos requieren eventos de analítica y un endpoint de resumen que aún no están disponibles.</p>
+        <div class="analytics-grid">
+          <article class="analytics-card">
+            <h3>Visitantes únicos</h3>
+            <p>Personas que visitan la tienda durante el periodo seleccionado.</p>
+            <span class="analytics-status">Pendiente de recopilación</span>
+          </article>
+          <article class="analytics-card">
+            <h3>Tasa de conversión</h3>
+            <p>Proporción de visitantes que completan una compra.</p>
+            <span class="analytics-status">Pendiente de recopilación</span>
+          </article>
+          <article class="analytics-card">
+            <h3>Ventas por categoría</h3>
+            <p>Ingresos y unidades vendidas en cada categoría de productos.</p>
+            <span class="analytics-status">Pendiente de clasificación</span>
+          </article>
+          <article class="analytics-card">
+            <h3>Meta mensual</h3>
+            <p>Avance de ventas respecto a la meta configurada para el mes.</p>
+            <span class="analytics-status">Pendiente de configuración</span>
+          </article>
+          <article class="analytics-card">
+            <h3>Clientes activos por país</h3>
+            <p>Clientes únicos activos, agrupados por ubicación.</p>
+            <span class="analytics-status">Pendiente de recopilación</span>
+          </article>
+          <article class="analytics-card">
+            <h3>Fuentes de tráfico</h3>
+            <p>Visitas que llegan desde búsqueda, redes y campañas.</p>
+            <span class="analytics-status">Pendiente de recopilación</span>
+          </article>
+          <article class="analytics-card">
+            <h3>Actividad de la tienda</h3>
+            <p>Eventos como nuevos pedidos, reseñas y cambios de inventario.</p>
+            <span class="analytics-status">Pendiente de instrumentación</span>
+          </article>
+        </div>
+        <p class="analytics-note">No se muestran cifras estimadas: estas métricas aún no se recopilan.</p>
       </section>
     </div>
   </main>

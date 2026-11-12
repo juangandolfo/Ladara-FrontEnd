@@ -41,7 +41,6 @@
 .dashboard-heading p,
 .metric-caption,
 .panel-heading p,
-.panel-supporting,
 .analytics-note {
   color: var(--color-secondary-dark);
   font-size: 0.875rem;
@@ -49,7 +48,7 @@
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
 }
@@ -133,12 +132,13 @@
 
 .revenue-panel,
 .recent-orders-panel {
-  grid-column: span 8;
+  grid-column: span 6;
 }
 
-.fulfillment-panel,
-.analytics-panel {
-  grid-column: span 4;
+.analytics-section {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--spacing-md);
 }
 
 .panel-heading {
@@ -202,21 +202,6 @@
   font-size: 0.875rem;
 }
 
-.fulfillment-count {
-  margin: var(--spacing-xl) 0 var(--spacing-sm);
-  color: var(--color-primary-violet);
-  font-size: 2.5rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.panel-supporting {
-  margin-bottom: var(--spacing-lg);
-  line-height: 1.5;
-}
-
-.panel-action,
 .dashboard-refresh {
   min-height: 44px;
 }
@@ -299,18 +284,49 @@
   border-color: var(--color-warning);
 }
 
-.analytics-list {
+.analytics-grid {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-sm);
-  margin: var(--spacing-lg) 0;
-  padding-left: var(--spacing-lg);
+}
+
+.analytics-card {
+  min-width: 0;
+  min-height: 144px;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  border: 1px solid var(--color-secondary-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+}
+
+.analytics-card h3 {
+  color: var(--color-secondary-dark);
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.analytics-card p {
+  flex: 1;
   color: var(--color-secondary-dark);
   font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.analytics-status {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-secondary-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-secondary-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .analytics-note {
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-secondary-border);
   line-height: 1.5;
 }
 
@@ -678,10 +694,6 @@
 }
 
 @media (max-width: 992px) {
-  .metrics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .dashboard-panels {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -691,9 +703,8 @@
     grid-column: span 2;
   }
 
-  .fulfillment-panel,
-  .analytics-panel {
-    grid-column: span 1;
+  .analytics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -725,10 +736,12 @@
   }
 
   .revenue-panel,
-  .recent-orders-panel,
-  .fulfillment-panel,
-  .analytics-panel {
+  .recent-orders-panel {
     grid-column: auto;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
   }
 
   .dashboard-panel {

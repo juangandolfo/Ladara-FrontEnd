@@ -24,10 +24,8 @@ describe('DashboardComponent', () => {
     expect(component.isLoggedIn()).toBeTrue();
     component.ngOnInit();
     expect(orderService.getAdminDashboardSummary).toHaveBeenCalled();
-    expect(component.metrics.map(metric => metric.value)).toEqual([4, 2, 8]);
-    expect(component.metrics.map(metric => metric.label)).toEqual([
-      'Carritos activos', 'Pedidos realizados', 'Pedidos finalizados en los últimos 30 días'
-    ]);
+    expect(component.summary?.orderPlacedCount).toBe(2);
+    expect(component.summary?.completedLast30DaysCount).toBe(8);
     component.openPendingOrders();
     expect(component.pendingOrders.map(order => order.id)).toEqual([21]);
     expect(component.pendingOrdersTotal).toBe(99.5);
@@ -57,6 +55,25 @@ describe('DashboardComponent', () => {
 
     expect(component.error).toBe('La respuesta del resumen no contiene los indicadores esperados.');
     expect(component.isLoading).toBeFalse();
+  });
+
+  it('loads useful order metrics even when the response omits active cart count', () => {
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      {
+        getAdminDashboardSummary: () => of({
+          success: true,
+          data: { orderPlacedCount: 3, completedLast30DaysCount: 5 }
+        })
+      } as any
+    );
+
+    component.loadSummary();
+
+    expect(component.error).toBeNull();
+    expect(component.summary?.orderPlacedCount).toBe(3);
+    expect(component.summary?.completedLast30DaysCount).toBe(5);
   });
 
   it('derives confirmed revenue and recent dashboard orders from admin orders', () => {

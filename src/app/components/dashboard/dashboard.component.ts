@@ -6,11 +6,6 @@ import { AuthService } from '../../services/auth.service';
 import { AdminDashboardSummary, AdminOrder, OrderService } from '../../services/order.service';
 import { OrderFulfillmentUpdateDto, OrderPaymentStatus } from '../../services/models/order.model';
 
-interface DashboardMetric {
-  label: string;
-  value: number;
-}
-
 interface RevenueDay {
   date: string;
   label: string;
@@ -73,16 +68,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  get metrics(): DashboardMetric[] {
-    if (!this.summary) return [];
-
-    return [
-      { label: 'Carritos activos', value: this.summary.cartCount },
-      { label: 'Pedidos realizados', value: this.summary.orderPlacedCount },
-      { label: 'Pedidos finalizados en los últimos 30 días', value: this.summary.completedLast30DaysCount }
-    ];
-  }
-
   loadSummary(): void {
     this.isLoading = true;
     this.error = null;
@@ -95,7 +80,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           if (
             !response.success ||
             !counts ||
-            !Number.isFinite(counts.cartCount) ||
             !Number.isFinite(counts.orderPlacedCount) ||
             !Number.isFinite(counts.completedLast30DaysCount)
           ) {
@@ -216,10 +200,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private isRevenueConfirmed(order: AdminOrder): boolean {
     const status = order.status.trim().toLowerCase();
     return order.paymentStatus === 'paid' && status !== 'cancelled' && status !== 'canceled';
-  }
-
-  trackByMetricLabel(index: number, metric: DashboardMetric): string {
-    return metric.label;
   }
 
   openPendingOrders(): void {
