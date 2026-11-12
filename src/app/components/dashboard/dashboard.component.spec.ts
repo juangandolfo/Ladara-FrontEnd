@@ -157,6 +157,54 @@ describe('DashboardComponent', () => {
     expect(component.isUpdatingFulfillment).toBeFalse();
   });
 
+  it('lists completed orders and allows correcting their fulfillment details', () => {
+    const completedOrder = {
+      id: 45,
+      status: 'completed',
+      total: 60,
+      createdAt: '2026-02-01',
+      paymentStatus: 'paid',
+      paymentReference: 'TR-OLD',
+      paidAt: '2026-02-01',
+      invoiceIdentifier: 'INV-45',
+      invoiceIssuedAt: '2026-02-01',
+      isDelivered: true,
+      deliveredAt: '2026-02-02',
+      deliveryDocumentIdentifier: 'DEL-45',
+      completedAt: '2026-02-02',
+      items: [{ id: 5, productId: 7, quantity: 3, price: 20, total: 60, product: { id: 7, name: 'Guantes de nitrilo' } }]
+    };
+    const orderService = {
+      getAllOrdersForAdmin: jasmine.createSpy('getAllOrdersForAdmin').and.returnValue(of({
+        success: true,
+        data: [completedOrder, { ...completedOrder, id: 46, status: 'order_placed' }]
+      })),
+      updateOrderFulfillment: jasmine.createSpy('updateOrderFulfillment').and.returnValue(of({
+        success: true,
+        data: { ...completedOrder, paymentReference: 'TR-CORRECTED' }
+      }))
+    };
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      orderService as any
+    );
+
+    component.openCompletedOrders();
+
+    expect(component.isViewingCompletedOrders).toBeTrue();
+    expect(component.displayedOrders.map(order => order.id)).toEqual([45]);
+    expect(component.displayedOrdersTotal).toBe(60);
+
+    component.openPendingOrderDetail(completedOrder as any);
+    component.setPaymentReference({ target: { value: 'TR-CORRECTED' } } as any);
+    component.saveOrderFulfillment();
+
+    expect(orderService.updateOrderFulfillment).toHaveBeenCalledWith(45, { paymentReference: 'TR-CORRECTED' });
+    expect(completedOrder.paymentReference).toBe('TR-CORRECTED');
+    expect(component.fulfillmentMessage).toContain('Se actualizaron');
+  });
+
   it('sends null to clear fulfillment references and turns invoice off independently', () => {
     const order = {
       id: 32,

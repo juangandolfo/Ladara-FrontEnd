@@ -48,7 +48,12 @@
           <h3>{{ metric.label }}</h3>
           <p class="metric-value">{{ metric.value | number }}</p>
         </button>
-        <article class="metric-card" *ngIf="metric.label !== 'Pedidos realizados'">
+        <button class="metric-card metric-card-action" *ngIf="metric.label === 'Pedidos finalizados en los últimos 30 días'"
+          type="button" (click)="openCompletedOrders()" aria-haspopup="dialog" aria-label="Ver pedidos completados">
+          <h3>{{ metric.label }}</h3>
+          <p class="metric-value">{{ metric.value | number }}</p>
+        </button>
+        <article class="metric-card" *ngIf="metric.label !== 'Pedidos realizados' && metric.label !== 'Pedidos finalizados en los últimos 30 días'">
           <h3>{{ metric.label }}</h3>
           <p class="metric-value">{{ metric.value | number }}</p>
         </article>
@@ -60,22 +65,22 @@
     (click)="onPendingOrdersBackdropClick($event)">
     <header class="pending-orders-header">
       <div>
-        <h2 id="pending-orders-title">{{ selectedPendingOrder ? 'Pedido #' + selectedPendingOrder.id : 'Pedidos realizados' }}</h2>
-        <p *ngIf="!selectedPendingOrder">{{ pendingOrders.length }} {{ pendingOrders.length === 1 ? 'pedido' : 'pedidos' }} por gestionar</p>
+        <h2 id="pending-orders-title">{{ selectedPendingOrder ? 'Pedido #' + selectedPendingOrder.id : (isViewingCompletedOrders ? 'Pedidos completados' : 'Pedidos realizados') }}</h2>
+        <p *ngIf="!selectedPendingOrder">{{ displayedOrders.length }} {{ displayedOrders.length === 1 ? 'pedido' : 'pedidos' }} {{ isViewingCompletedOrders ? 'completados' : 'por gestionar' }}</p>
         <p *ngIf="selectedPendingOrder">Información de contacto, artículos y estado</p>
       </div>
-      <button class="dialog-close" type="button" (click)="closePendingOrders()" aria-label="Cerrar pedidos pendientes">
+      <button class="dialog-close" type="button" (click)="closePendingOrders()" aria-label="Cerrar pedidos">
         <span aria-hidden="true">&times;</span>
       </button>
     </header>
 
     <div class="pending-orders-body">
       <div class="dashboard-loading" *ngIf="isLoadingPendingOrders" role="status" aria-live="polite" aria-busy="true">
-        Cargando pedidos pendientes...
+        {{ isViewingCompletedOrders ? 'Cargando pedidos completados...' : 'Cargando pedidos pendientes...' }}
       </div>
 
       <section class="dashboard-error" *ngIf="pendingOrdersError && !isLoadingPendingOrders" role="alert">
-        <h3>No pudimos cargar los pedidos realizados</h3>
+        <h3>No pudimos cargar los pedidos</h3>
         <p>{{ pendingOrdersError }}</p>
         <button class="btn btn-secondary" type="button" (click)="retryPendingOrders()">Reintentar</button>
       </section>
@@ -83,7 +88,7 @@
       <ng-container *ngIf="!isLoadingPendingOrders && !pendingOrdersError">
         <section class="order-detail" *ngIf="selectedPendingOrder as order; else pendingOrdersList" aria-labelledby="order-contact-title">
           <button class="btn btn-ghost detail-back" type="button" (click)="backToPendingOrders()">
-            Volver a pedidos pendientes
+            {{ isViewingCompletedOrders ? 'Volver a pedidos completados' : 'Volver a pedidos pendientes' }}
           </button>
 
           <div class="order-detail-summary">
@@ -229,12 +234,12 @@
         </section>
 
         <ng-template #pendingOrdersList>
-          <div class="pending-orders-total" *ngIf="pendingOrders.length">
-            <span>Importe total de pedidos por gestionar</span>
-            <strong>{{ pendingOrdersTotal | currency }}</strong>
+          <div class="pending-orders-total" *ngIf="displayedOrders.length">
+            <span>{{ isViewingCompletedOrders ? 'Importe total de pedidos completados' : 'Importe total de pedidos por gestionar' }}</span>
+            <strong>{{ displayedOrdersTotal | currency }}</strong>
           </div>
 
-          <div class="pending-orders-table-wrap" *ngIf="pendingOrders.length; else noPendingOrders">
+          <div class="pending-orders-table-wrap" *ngIf="displayedOrders.length; else noPendingOrders">
             <table class="pending-orders-table">
               <thead>
                 <tr>
@@ -247,7 +252,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let order of pendingOrders; trackBy: trackByPendingOrderId">
+                <tr *ngFor="let order of displayedOrders; trackBy: trackByPendingOrderId">
                   <th scope="row">
                     <button class="order-number-link" type="button" (click)="openPendingOrderDetail(order)"
                       [attr.aria-label]="'Ver detalles del pedido ' + order.id">#{{ order.id }}</button>
@@ -264,8 +269,8 @@
 
           <ng-template #noPendingOrders>
             <section class="pending-orders-empty" aria-live="polite">
-              <h3>No hay pedidos por gestionar</h3>
-              <p>Los nuevos pedidos realizados aparecerán aquí.</p>
+              <h3>{{ isViewingCompletedOrders ? 'No hay pedidos completados' : 'No hay pedidos por gestionar' }}</h3>
+              <p>{{ isViewingCompletedOrders ? 'Los pedidos completados aparecerán aquí.' : 'Los nuevos pedidos realizados aparecerán aquí.' }}</p>
             </section>
           </ng-template>
         </ng-template>

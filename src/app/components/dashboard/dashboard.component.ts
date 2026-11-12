@@ -34,8 +34,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoading = true;
   error: string | null = null;
   pendingOrders: AdminOrder[] = [];
+  completedOrders: AdminOrder[] = [];
   isLoadingPendingOrders = false;
   pendingOrdersError: string | null = null;
+  isViewingCompletedOrders = false;
   selectedPendingOrder: AdminOrder | null = null;
   fulfillmentForm: AdminFulfillmentForm | null = null;
   isUpdatingFulfillment = false;
@@ -106,6 +108,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openPendingOrders(): void {
+    this.openOrders(false);
+  }
+
+  openCompletedOrders(): void {
+    this.openOrders(true);
+  }
+
+  private openOrders(showCompletedOrders: boolean): void {
+    this.isViewingCompletedOrders = showCompletedOrders;
     const dialog = this.pendingOrdersDialog?.nativeElement;
     if (dialog && !dialog.open) dialog.showModal();
 
@@ -121,10 +132,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         next: response => {
           if (!response.success || !Array.isArray(response.data)) {
             this.pendingOrders = [];
+            this.completedOrders = [];
             this.pendingOrdersError = response.message || 'La respuesta de pedidos no es válida.';
           } else {
             this.pendingOrders = response.data.filter(order =>
               this.isOrderPlaced(order.status)
+            );
+            this.completedOrders = response.data.filter(order =>
+              this.isOrderCompleted(order.status)
             );
           }
           this.isLoadingPendingOrders = false;
@@ -138,6 +153,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private getPendingOrdersErrorMessage(error: any): string {
+    const orderType = this.isViewingCompletedOrders ? 'completados' : 'realizados';
     const backendMessage = typeof error?.error?.message === 'string'
       ? error.error.message.trim()
       : '';
@@ -152,8 +168,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return 'Tu cuenta no tiene permisos de administrador para consultar los pedidos.';
       default:
         return error?.status
-          ? `No se pudieron cargar los pedidos realizados (error HTTP ${error.status}).`
-          : 'No se pudieron cargar los pedidos realizados. Inténtalo nuevamente.';
+          ? `No se pudieron cargar los pedidos ${orderType} (error HTTP ${error.status}).`
+          : `No se pudieron cargar los pedidos ${orderType}. Inténtalo nuevamente.`;
     }
   }
 
@@ -165,6 +181,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.initialFulfillmentForm = null;
     this.fulfillmentError = null;
     this.fulfillmentMessage = null;
+    this.isViewingCompletedOrders = false;
   }
 
   onPendingOrdersBackdropClick(event: MouseEvent): void {
@@ -172,7 +189,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   retryPendingOrders(): void {
-    this.openPendingOrders();
+    this.openOrders(this.isViewingCompletedOrders);
   }
 
   openPendingOrderDetail(order: AdminOrder): void {
@@ -273,6 +290,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
             if (!this.isOrderPlaced(order.status)) {
               this.pendingOrders = this.pendingOrders.filter(pendingOrder => pendingOrder.id !== order.id);
             }
+            if (!this.isOrderCompleted(order.status)) {
+              this.completedOrders = this.completedOrders.filter(completedOrder => completedOrder.id !== order.id);
+            }
             this.fulfillmentMessage = 'Se actualizaron los datos de pago, facturación o entrega.';
             this.loadSummary();
           }
@@ -335,8 +355,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return String(status).trim().toLowerCase().replace(/[\s-]+/g, '_') === 'order_placed';
   }
 
+  isOrderCompleted(status: string): boolean {
+    return String(status).trim().toLowerCase().replace(/[\s-]+/g, '_') === 'completed';
+  }
+
+  get displayedOrders(): AdminOrder[] {
+    return this.isViewingCompletedOrders ? this.completedOrders : this.pendingOrders;
+  }
+
   get pendingOrdersTotal(): number {
     return this.pendingOrders.reduce((sum, order) => {
+      const total = Number(order.total);
+      return sum + (Number.isFinite(total) ? total : 0);
+    }, 0);
+  }
+
+  get displayedOrdersTotal(): number {
+    return this.displayedOrders.reduce((sum, order) => {
       const total = Number(order.total);
       return sum + (Number.isFinite(total) ? total : 0);
     }, 0);
