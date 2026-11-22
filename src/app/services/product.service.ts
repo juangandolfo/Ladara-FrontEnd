@@ -4,6 +4,7 @@ import {Observable} from 'rxjs';
 import {FilterProductsApiResponse, ProductFilterDto} from './models/product.models';
 import {ApiResponse} from './models/base.model';
 import {GetCategoriesResponse} from './models/order.model';
+import {BrowserStorageService} from './browser-storage.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,11 +13,14 @@ export class ProductService {
   localhost = 'http://localhost:3000';
   private baseUrl = `${this.localhost}/api/products`;
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private readonly storage: BrowserStorageService
+  ) {
   }
 
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
+    const token = this.storage.getItem('token');
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'

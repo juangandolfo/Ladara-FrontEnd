@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {Observable, retry, throwError, timer} from 'rxjs';
 import {CheckoutOrderDto, OrderDto, OrderFulfillmentUpdateDto, OrderPaymentMethod, OrderPaymentStatus} from './models/order.model';
+import {BrowserStorageService} from './browser-storage.service';
 
 export interface AddItemToOrderDto {
   productId: number;
@@ -119,11 +120,14 @@ export interface AdminOrdersResponse {
 export class OrderService {
   private baseUrl = 'http://localhost:3000/api/orders'; // Adjust URL as needed
 
-  constructor(private http: HttpClient) {
+  constructor(
+    private http: HttpClient,
+    private readonly storage: BrowserStorageService
+  ) {
   }
 
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
+    const token = this.storage.getItem('token');
     return new HttpHeaders({
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'

@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {HttpClient} from '@angular/common/http';
 import {Router} from '@angular/router';
 import {Observable, catchError, map, of} from 'rxjs';
+import {BrowserStorageService} from './browser-storage.service';
 
 export interface AppUser {
   id?: number | string;
@@ -19,7 +20,8 @@ export class AuthService {
 
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private readonly storage: BrowserStorageService
   ) {
   }
 
@@ -51,7 +53,7 @@ export class AuthService {
       if (event.origin !== backendOrigin) return;
       if (event.data?.token) {
         const user = this.normalizeUserPayload(event.data.user ?? event.data);
-        localStorage.setItem('token', event.data.token);
+        this.storage.setItem('token', event.data.token);
         window.removeEventListener('message', messageListener);
         if (authWindow && !authWindow.closed) authWindow.close();
         // Trigger storage event for cross-tab communication
@@ -70,7 +72,7 @@ export class AuthService {
   }
 
   getCurrentUser(): Observable<AppUser | null> {
-    const token = localStorage.getItem('token');
+    const token = this.storage.getItem('token');
     if (!token) return of(null);
 
     return this.http.get<{ user?: AppUser; isAdmin?: boolean } | AppUser>(`${this.backendUrl}/auth/me`, {
@@ -97,7 +99,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
+    this.storage.removeItem('token');
     // Trigger storage event for cross-tab communication
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'token',
@@ -106,6 +108,6 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return localStorage.getItem('token') !== null;
+    return this.storage.getItem('token') !== null;
   }
 }

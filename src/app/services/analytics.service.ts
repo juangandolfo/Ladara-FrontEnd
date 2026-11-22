@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
+import { BrowserStorageService } from './browser-storage.service';
 
 export interface AdminDashboardData {
   period: { from: string; to: string; timezone: string };
@@ -40,7 +41,10 @@ export interface BusinessSettingResponse<T> {
 export class AnalyticsService {
   private readonly baseUrl = 'http://localhost:3000/api';
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly storage: BrowserStorageService
+  ) {}
 
   getAdminDashboard(from: string, to: string): Observable<AdminDashboardResponse> {
     const validationError = this.validateDateRange(from, to);
@@ -84,7 +88,7 @@ export class AnalyticsService {
   }
 
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
+    const token = this.storage.getItem('token');
     return new HttpHeaders({
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'

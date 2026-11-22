@@ -9,6 +9,7 @@ import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
 import { DialogService } from '../../services/dialog.service';
 import { APP_CONFIG } from '../../config/app.config';
+import { BrowserStorageService } from '../../services/browser-storage.service';
 
 // Constants
 const DEFAULT_ITEMS_PER_PAGE = 4;
@@ -57,7 +58,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   readonly isLoggedIn = signal(false);
   readonly productQuantities = signal<Map<number, number>>(new Map());
   readonly cartFeedback = signal('');
-  readonly guestCart = signal<GuestCartItem[]>(this.readGuestCart());
+  readonly guestCart = signal<GuestCartItem[]>([]);
   readonly serverCartItemCount = signal(0);
   readonly showCartMiniSummary = signal(false);
   readonly cartItemCount = computed(() =>
@@ -99,8 +100,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     private readonly productService: ProductService,
     private readonly orderService: OrderService,
     private readonly authService: AuthService,
-    private readonly dialogService: DialogService
+    private readonly dialogService: DialogService,
+    private readonly storageService: BrowserStorageService = new BrowserStorageService()
   ) {
+    this.guestCart.set(this.readGuestCart());
     this.setupSearchDebounce();
   }
 
@@ -696,7 +699,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   private readGuestCart(): GuestCartItem[] {
     try {
-      const stored = localStorage.getItem('ladara-guest-cart');
+      const stored = this.storageService.getItem('ladara-guest-cart');
       const parsed = stored ? JSON.parse(stored) : [];
       return Array.isArray(parsed)
         ? parsed.filter((item): item is GuestCartItem =>
@@ -710,14 +713,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private persistGuestCart(items: GuestCartItem[]): void {
-    try {
-      if (items.length) {
-        localStorage.setItem('ladara-guest-cart', JSON.stringify(items));
-      } else {
-        localStorage.removeItem('ladara-guest-cart');
-      }
-    } catch (error) {
-      console.error('Unable to persist guest cart:', error);
+    const persisted = items.length
+      ? this.storageService.setItem('ladara-guest-cart', JSON.stringify(items))
+      : this.storageService.removeItem('ladara-guest-cart');
+
+    if (!persisted) {
       this.cartFeedback.set('No se pudo guardar el carrito en este dispositivo');
     }
   }

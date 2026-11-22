@@ -6,12 +6,16 @@ import {
   BillingInformationInput,
   BillingInformationResponse
 } from './models/billing-information.model';
+import { BrowserStorageService } from './browser-storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class BillingInformationService {
   private readonly baseUrl = 'http://localhost:3000/api/billing-information';
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly storage: BrowserStorageService
+  ) {}
 
   list(): Observable<BillingInformationResponse<BillingInformation[]>> {
     return this.http.get<BillingInformationResponse<BillingInformation[]>>(this.baseUrl, {
@@ -44,7 +48,7 @@ export class BillingInformationService {
   }
 
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
+    const token = this.storage.getItem('token');
     return new HttpHeaders({
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
