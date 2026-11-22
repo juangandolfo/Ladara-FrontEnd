@@ -9,8 +9,9 @@ import { DialogService } from '../../services/dialog.service';
 import { BillingInformationService } from '../../services/billing-information.service';
 import { BillingInformation, BillingInformationInput } from '../../services/models/billing-information.model';
 import { CartItem } from '../../models/cart-item.model';
+import { APP_CONFIG, isValidCouponCode } from '../../config/app.config';
 
-const TAX_RATE = 0.08;
+const TAX_RATE = APP_CONFIG.TAX_RATE;
 
 export interface SummaryItem {
   id?: number;
@@ -44,7 +45,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   readonly isLoading = signal(false);
   readonly error = signal<string | null>(null);
   readonly rejectedItemIds = signal<number[]>([]);
-  readonly activeCoupon = signal<string>('DISCOUNT10'); // Managed via signal for dynamic reactivity
+  readonly activeCoupon = signal<string>(APP_CONFIG.VALID_COUPON_CODE); // Managed via signal for dynamic reactivity
   readonly billingAddresses = signal<BillingInformation[]>([]);
   readonly selectedBillingInformationId = signal<number | null>(null);
   readonly isLoadingAddresses = signal(false);
@@ -80,7 +81,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
     const subtotal = items.reduce((acc, curr) => acc + curr.itemTotal, 0);
     const couponCode = this.activeCoupon();
-    const discount = this.validateCouponCode(couponCode) ? subtotal * 0.1 : 0;
+    const discount = this.validateCouponCode(couponCode) ? subtotal * APP_CONFIG.COUPON_DISCOUNT_RATE : 0;
     const taxableAmount = Math.max(0, subtotal - discount);
     const tax = taxableAmount * TAX_RATE;
     const total = taxableAmount + tax;
@@ -292,7 +293,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   }
 
   validateCouponCode(code: string): boolean {
-    return code === 'DISCOUNT10';
+    return isValidCouponCode(code);
   }
 
   goHome(): void {

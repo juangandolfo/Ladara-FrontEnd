@@ -8,14 +8,15 @@ import { ProductService } from '../../services/product.service';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
 import { DialogService } from '../../services/dialog.service';
+import { APP_CONFIG } from '../../config/app.config';
 
 // Constants
 const DEFAULT_ITEMS_PER_PAGE = 4;
 const SEARCH_DEBOUNCE_TIME = 300;
-const TAX_RATE = 0.08;
+const TAX_RATE = APP_CONFIG.TAX_RATE;
 const MAX_VISIBLE_PAGES = 7;
 const ALL_CATEGORIES = 'Todas';
-const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
+const DEFAULT_PRODUCT_IMAGE = APP_CONFIG.DEFAULT_PRODUCT_IMAGE;
 
 // Interfaces
 interface ProductFilters {

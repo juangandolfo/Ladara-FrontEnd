@@ -5,9 +5,10 @@ import { Subject, takeUntil, forkJoin, EMPTY, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { OrderService } from '../../services/order.service';
 import { OrderStatus } from '../../models/order-status.enum';
+import { APP_CONFIG } from '../../config/app.config';
 
 // Constants
-const DEFAULT_PLACEHOLDER_IMAGE = '/vacuna.jpg';
+const DEFAULT_PLACEHOLDER_IMAGE = APP_CONFIG.DEFAULT_PRODUCT_IMAGE;
 
 // Re-exported for backward compatibility with existing imports (e.g. specs)
 export { OrderStatus };

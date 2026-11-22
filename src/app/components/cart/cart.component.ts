@@ -10,11 +10,12 @@ import { DialogService } from '../../services/dialog.service';
 import { ProductService } from '../../services/product.service';
 import { Product } from '../../services/models/product.models';
 import { CartItem } from '../../models/cart-item.model';
+import { APP_CONFIG, isValidCouponCode } from '../../config/app.config';
 
 // Constants
-const TAX_RATE = 0.08;
+const TAX_RATE = APP_CONFIG.TAX_RATE;
 const MIN_QUANTITY = 1;
-const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
+const DEFAULT_PRODUCT_IMAGE = APP_CONFIG.DEFAULT_PRODUCT_IMAGE;
 const CART_REFRESH_INTERVAL = 5000;
 
 // Interfaces
@@ -77,7 +78,7 @@ export class CartComponent implements OnInit, OnDestroy {
     const totalItems = this.calculateTotalItems(items);
     const totalSavings = this.calculateTotalSavings(items);
     const couponCode = this.activeCoupon();
-    const discount = this.backendCouponDiscount() ?? (this.validateCouponCode(couponCode) ? subtotal * 0.1 : 0);
+    const discount = this.backendCouponDiscount() ?? (this.validateCouponCode(couponCode) ? subtotal * APP_CONFIG.COUPON_DISCOUNT_RATE : 0);
     const taxableAmount = Math.max(0, subtotal - discount);
     const tax = taxableAmount * TAX_RATE;
     const envio = this.envio();
@@ -236,7 +237,7 @@ export class CartComponent implements OnInit, OnDestroy {
   }
 
   validateCouponCode(code: string): boolean {
-    return code === 'DISCOUNT10';
+    return isValidCouponCode(code);
   }
 
   // Navigation Methods
