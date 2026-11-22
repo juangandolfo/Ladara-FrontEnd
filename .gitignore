@@ -36,7 +36,13 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
-.github/
+/.github/*
+!/.github/copilot-instructions.md
+!/.github/agents/
+/.github/agents/*
+!/.github/agents/frontend-specialist.agent.md
+!/.github/agents/tester.agent.md
+!/.github/agents/reviewer.agent.md
 .impeccable/
 
 # System files
