@@ -10,6 +10,7 @@ import { BillingInformationService } from '../../services/billing-information.se
 import { BillingInformation, BillingInformationInput } from '../../services/models/billing-information.model';
 import { CartItem } from '../../models/cart-item.model';
 import { APP_CONFIG, isValidCouponCode } from '../../config/app.config';
+import { CartCalculationService } from '../../services/cart-calculation.service';
 
 const TAX_RATE = APP_CONFIG.TAX_RATE;
 
@@ -79,20 +80,21 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       };
     });
 
-    const subtotal = items.reduce((acc, curr) => acc + curr.itemTotal, 0);
     const couponCode = this.activeCoupon();
-    const discount = this.validateCouponCode(couponCode) ? subtotal * APP_CONFIG.COUPON_DISCOUNT_RATE : 0;
-    const taxableAmount = Math.max(0, subtotal - discount);
-    const tax = taxableAmount * TAX_RATE;
-    const total = taxableAmount + tax;
+    const result = this.cartCalculationService.calculate({
+      itemTotals: items.map(item => item.itemTotal),
+      taxRate: TAX_RATE,
+      couponRate: APP_CONFIG.COUPON_DISCOUNT_RATE,
+      isCouponValid: this.validateCouponCode(couponCode)
+    });
 
     return {
       items,
-      subtotal,
+      subtotal: result.subtotal,
       couponCode,
-      discount,
-      tax,
-      total
+      discount: result.discount,
+      tax: result.tax,
+      total: result.total
     };
   });
 
@@ -100,7 +102,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly orderService: OrderService,
     private readonly dialogService: DialogService,
-    private readonly billingInformationService: BillingInformationService
+    private readonly billingInformationService: BillingInformationService,
+    private readonly cartCalculationService: CartCalculationService = new CartCalculationService()
   ) {}
 
   ngOnInit(): void {

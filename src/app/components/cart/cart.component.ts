@@ -11,6 +11,7 @@ import { ProductService } from '../../services/product.service';
 import { Product } from '../../services/models/product.models';
 import { CartItem } from '../../models/cart-item.model';
 import { APP_CONFIG, isValidCouponCode } from '../../config/app.config';
+import { CartCalculationService } from '../../services/cart-calculation.service';
 
 // Constants
 const TAX_RATE = APP_CONFIG.TAX_RATE;
@@ -74,18 +75,31 @@ export class CartComponent implements OnInit, OnDestroy {
   readonly cartSummary = computed((): CartSummary => {
     const items = this.cartItems();
 
-    const subtotal = this.calculateSubtotal(items);
+    const itemTotals = items.map(item => (item.discountedPrice ?? item.price) * item.quantity);
     const totalItems = this.calculateTotalItems(items);
     const totalSavings = this.calculateTotalSavings(items);
     const couponCode = this.activeCoupon();
-    const discount = this.backendCouponDiscount() ?? (this.validateCouponCode(couponCode) ? subtotal * APP_CONFIG.COUPON_DISCOUNT_RATE : 0);
-    const taxableAmount = Math.max(0, subtotal - discount);
-    const tax = taxableAmount * TAX_RATE;
-    const envio = this.envio();
-    const calculatedTotal = taxableAmount + tax + envio;
-    const total = this.authoritativeTotal() ?? calculatedTotal;
 
-    return { subtotal, totalItems, totalSavings, couponCode, discount, tax, envio, total };
+    const result = this.cartCalculationService.calculate({
+      itemTotals,
+      taxRate: TAX_RATE,
+      couponRate: APP_CONFIG.COUPON_DISCOUNT_RATE,
+      isCouponValid: this.validateCouponCode(couponCode),
+      discountOverride: this.backendCouponDiscount(),
+      shipping: this.envio(),
+      authoritativeTotal: this.authoritativeTotal()
+    });
+
+    return {
+      subtotal: result.subtotal,
+      totalItems,
+      totalSavings,
+      couponCode,
+      discount: result.discount,
+      tax: result.tax,
+      envio: result.shipping,
+      total: result.total
+    };
   });
 
   readonly subtotal = computed(() => this.cartSummary().subtotal);
@@ -104,7 +118,8 @@ export class CartComponent implements OnInit, OnDestroy {
     private readonly orderService: OrderService,
     private readonly authService: AuthService,
     private readonly dialogService: DialogService,
-    private readonly productService?: ProductService
+    private readonly productService?: ProductService,
+    private readonly cartCalculationService: CartCalculationService = new CartCalculationService()
   ) {}
 
    async ngOnInit(): Promise<void> {
@@ -472,13 +487,6 @@ export class CartComponent implements OnInit, OnDestroy {
       catchError(() => of({ success: false, data: [], meta: { total: 0, count: 0, appliedFilters: {} } } as any)),
       takeUntil(this.destroy$)
     ).subscribe(response => this.recommendedProducts.set(response.success ? response.data || [] : []));
-  }
-
-  private calculateSubtotal(items: CartItem[]): number {
-    return items.reduce((total, item) => {
-      const price = item.discountedPrice ?? item.price;
-      return total + (price * item.quantity);
-    }, 0);
   }
 
   private calculateTotalItems(items: CartItem[]): number {
