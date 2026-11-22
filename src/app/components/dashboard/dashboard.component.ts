@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
@@ -28,8 +28,7 @@ interface AdminFulfillmentForm {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   @ViewChild('pendingOrdersDialog') private pendingOrdersDialog?: ElementRef<HTMLDialogElement>;
@@ -52,6 +51,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   error: string | null = null;
   dashboardOrders: AdminOrder[] = [];
   recentDashboardOrders: AdminOrder[] = [];
+  hasRequestedDashboardOrders = false;
+  hasLoadedDashboardOrders = false;
   revenueDays: RevenueDay[] = [];
   private revenueChartDescription = 'Ingresos confirmados del periodo seleccionado.';
   isLoadingDashboardOrders = true;
@@ -86,8 +87,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private readonly router: Router,
     private readonly authService: AuthService,
     private readonly orderService: OrderService,
-    readonly analyticsService?: AnalyticsService,
-    private readonly changeDetector?: ChangeDetectorRef
+    readonly analyticsService?: AnalyticsService
   ) {}
 
   ngOnInit(): void {
@@ -124,13 +124,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.summary = counts;
           }
           this.isLoading = false;
-          this.changeDetector?.markForCheck();
         },
         error: error => {
           this.summary = null;
           this.error = error?.error?.message || 'No se pudieron cargar los indicadores de pedidos.';
           this.isLoading = false;
-          this.changeDetector?.markForCheck();
         }
       });
   }
@@ -149,13 +147,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.analytics = response.data;
           }
           this.isLoadingAnalytics = false;
-          this.changeDetector?.markForCheck();
         },
         error: error => {
           this.analyticsError = this.getAnalyticsErrorMessage(error);
           this.isLoadingAnalytics = false;
           if (error?.status === 401) this.authService.loginWithGoogle();
-          this.changeDetector?.markForCheck();
         }
       });
   }
@@ -187,12 +183,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.settingsError = response.message || 'No se pudo consultar la meta mensual.';
         }
         finish();
-        this.changeDetector?.markForCheck();
       },
       error: error => {
         this.settingsError = this.getSettingsErrorMessage(error);
         finish();
-        this.changeDetector?.markForCheck();
       }
     });
     this.analyticsService.getTimezone().pipe(takeUntil(this.destroy$)).subscribe({
@@ -200,12 +194,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
         if (response.success && response.data) this.timezoneInput = response.data.value;
         else this.settingsError = response.message || 'No se pudo consultar la zona horaria.';
         finish();
-        this.changeDetector?.markForCheck();
       },
       error: error => {
         this.settingsError = this.getSettingsErrorMessage(error);
         finish();
-        this.changeDetector?.markForCheck();
       }
     });
   }
@@ -253,13 +245,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
         this.isSavingSettings = false;
         this.savingSetting = null;
-        this.changeDetector?.markForCheck();
       },
       error: error => {
         this.settingsError = this.getSettingsErrorMessage(error);
         this.isSavingSettings = false;
         this.savingSetting = null;
-        this.changeDetector?.markForCheck();
       }
     });
   }
@@ -281,6 +271,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadDashboardOrders(): void {
+    this.hasRequestedDashboardOrders = true;
     this.isLoadingDashboardOrders = true;
     this.dashboardOrdersError = null;
     this.orderService.getAllOrdersForAdmin()
@@ -294,14 +285,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
           } else {
             this.dashboardOrders = response.data;
             this.recentDashboardOrders = this.buildRecentDashboardOrders(response.data);
+            this.syncOrderDialogLists();
           }
+          this.hasLoadedDashboardOrders = true;
           this.isLoadingDashboardOrders = false;
-          this.changeDetector?.markForCheck();
+          if (this.isLoadingPendingOrders) {
+            this.isLoadingPendingOrders = false;
+            this.pendingOrdersError = this.dashboardOrdersError;
+          }
         },
         error: error => {
           this.dashboardOrdersError = this.getPendingOrdersErrorMessage(error);
           this.isLoadingDashboardOrders = false;
-          this.changeDetector?.markForCheck();
+          this.hasLoadedDashboardOrders = true;
+          if (this.isLoadingPendingOrders) {
+            this.isLoadingPendingOrders = false;
+            this.pendingOrdersError = this.dashboardOrdersError;
+          }
         }
       });
   }
@@ -383,35 +383,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedPendingOrder = null;
     this.fulfillmentForm = null;
     this.initialFulfillmentForm = null;
-    this.pendingOrders = [];
-    this.isLoadingPendingOrders = true;
-    this.pendingOrdersError = null;
-    this.orderService.getAllOrdersForAdmin()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: response => {
-          if (!response.success || !Array.isArray(response.data)) {
-            this.pendingOrders = [];
-            this.completedOrders = [];
-            this.pendingOrdersError = response.message || 'La respuesta de pedidos no es válida.';
-          } else {
-            this.pendingOrders = response.data.filter(order =>
-              this.isOrderPlaced(order.status)
-            );
-            this.completedOrders = response.data.filter(order =>
-              this.isOrderCompleted(order.status)
-            );
-          }
-          this.isLoadingPendingOrders = false;
-          this.changeDetector?.markForCheck();
-        },
-        error: error => {
-          this.pendingOrders = [];
-          this.pendingOrdersError = this.getPendingOrdersErrorMessage(error);
-          this.isLoadingPendingOrders = false;
-          this.changeDetector?.markForCheck();
-        }
-      });
+    this.pendingOrdersError = this.dashboardOrdersError;
+    this.isLoadingPendingOrders = !this.hasLoadedDashboardOrders;
+    this.syncOrderDialogLists();
+
+    // The dashboard already loads this collection. Only request it here if the
+    // initial request has already finished without producing a usable result.
+    if (!this.hasLoadedDashboardOrders && !this.hasRequestedDashboardOrders) {
+      this.isLoadingPendingOrders = true;
+      this.loadDashboardOrders();
+    }
+  }
+
+  private syncOrderDialogLists(): void {
+    this.pendingOrders = this.dashboardOrders.filter(order => this.isOrderPlaced(order.status));
+    this.completedOrders = this.dashboardOrders.filter(order => this.isOrderCompleted(order.status));
   }
 
   private getPendingOrdersErrorMessage(error: any): string {
@@ -451,7 +437,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   retryPendingOrders(): void {
-    this.openOrders(this.isViewingCompletedOrders);
+    this.pendingOrdersError = null;
+    this.isLoadingPendingOrders = true;
+    this.loadDashboardOrders();
   }
 
   openPendingOrderDetail(order: AdminOrder): void {
@@ -547,6 +535,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
             this.fulfillmentError = response.message || 'El servidor no devolvió el pedido actualizado.';
           } else {
             Object.assign(order, response.data);
+            const orderExists = this.dashboardOrders.some(dashboardOrder => dashboardOrder.id === order.id);
+            this.dashboardOrders = orderExists
+              ? this.dashboardOrders.map(dashboardOrder => dashboardOrder.id === order.id ? order : dashboardOrder)
+              : [...this.dashboardOrders, order];
+            this.recentDashboardOrders = this.buildRecentDashboardOrders(this.dashboardOrders);
+            this.syncOrderDialogLists();
             this.fulfillmentForm = this.createFulfillmentForm(order);
             this.initialFulfillmentForm = { ...this.fulfillmentForm };
             if (!this.isOrderPlaced(order.status)) {
@@ -557,17 +551,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
             }
             this.fulfillmentMessage = 'Se actualizaron los datos de pago, facturación o entrega.';
             this.loadSummary();
-            this.loadDashboardOrders();
           }
           this.isUpdatingFulfillment = false;
-          this.changeDetector?.markForCheck();
         },
         error: error => {
           this.fulfillmentError = error?.status === 409
             ? error?.error?.message || 'El pedido cambió en el servidor. Actualiza los datos e inténtalo nuevamente.'
             : error?.error?.message || 'No se pudo actualizar el pedido. Inténtalo nuevamente.';
           this.isUpdatingFulfillment = false;
-          this.changeDetector?.markForCheck();
         }
       });
   }

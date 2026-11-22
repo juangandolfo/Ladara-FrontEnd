@@ -1,5 +1,5 @@
 import { DashboardComponent } from './dashboard.component';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 describe('DashboardComponent', () => {
   it('delegates auth actions and navigation', () => {
@@ -164,6 +164,59 @@ describe('DashboardComponent', () => {
     expect(component.pendingOrdersError).toBe('Tu cuenta no tiene permisos de administrador para consultar los pedidos.');
   });
 
+  it('updates the completed-orders dialog as soon as the existing request returns', () => {
+    const ordersResponse = new Subject<any>();
+    const getAllOrdersForAdmin = jasmine.createSpy('getAllOrdersForAdmin').and.returnValue(ordersResponse);
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      {
+        getAdminDashboardSummary: () => of({ success: true, data: { orderPlacedCount: 0, completedLast30DaysCount: 1 } }),
+        getAllOrdersForAdmin
+      } as any
+    );
+
+    component.ngOnInit();
+    component.openCompletedOrders();
+    expect(component.isLoadingPendingOrders).toBeTrue();
+    expect(getAllOrdersForAdmin).toHaveBeenCalledTimes(1);
+
+    ordersResponse.next({ success: true, data: [
+      { id: 1, status: 'completed', total: 45, createdAt: '2026-11-01' },
+      { id: 2, status: 'order_placed', total: 25, createdAt: '2026-11-02' }
+    ] });
+
+    expect(component.isLoadingPendingOrders).toBeFalse();
+    expect(component.completedOrders.map(order => order.id)).toEqual([1]);
+    expect(component.dashboardOrders.length).toBe(2);
+    expect(getAllOrdersForAdmin).toHaveBeenCalledTimes(1);
+    component.ngOnDestroy();
+  });
+
+  it('opens completed and ongoing orders immediately from the loaded dashboard data', () => {
+    const getAllOrdersForAdmin = jasmine.createSpy('getAllOrdersForAdmin').and.returnValue(of({
+      success: true,
+      data: [
+        { id: 1, status: 'completed', total: 45, createdAt: '2026-11-01' },
+        { id: 2, status: 'order_placed', total: 25, createdAt: '2026-11-02' }
+      ]
+    }));
+    const component = new DashboardComponent(
+      { navigate: jasmine.createSpy('navigate') } as any,
+      { isLoggedIn: () => true } as any,
+      { getAllOrdersForAdmin } as any
+    );
+    component.loadDashboardOrders();
+
+    component.openCompletedOrders();
+    expect(component.completedOrders.map(order => order.id)).toEqual([1]);
+    expect(component.isLoadingPendingOrders).toBeFalse();
+    component.openPendingOrders();
+    expect(component.pendingOrders.map(order => order.id)).toEqual([2]);
+    expect(getAllOrdersForAdmin).toHaveBeenCalledTimes(1);
+    component.ngOnDestroy();
+  });
+
   it('opens order details and sends only changed fulfillment fields', () => {
     const order = {
       id: 21,
@@ -213,7 +266,7 @@ describe('DashboardComponent', () => {
       paymentStatus: 'paid',
       isDelivered: true
     });
-    expect(orderService.getAllOrdersForAdmin).toHaveBeenCalled();
+    expect(orderService.getAllOrdersForAdmin).not.toHaveBeenCalled();
     expect(component.selectedPendingOrder?.paymentStatus).toBe('paid');
     expect(component.pendingOrders.map(pendingOrder => pendingOrder.id)).toEqual([21]);
     expect(component.fulfillmentMessage).toContain('Se actualizaron');
