@@ -1,5 +1,5 @@
 import { Component, computed, OnInit, signal, OnDestroy, HostListener } from '@angular/core';
-import { CommonModule, NgOptimizedImage } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged, switchMap, forkJoin, map } from 'rxjs';
@@ -41,7 +41,7 @@ interface GuestCartItem {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],//, NgOptimizedImage],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
