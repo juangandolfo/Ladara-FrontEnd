@@ -4,21 +4,13 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil, forkJoin, EMPTY, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { OrderService } from '../../services/order.service';
+import { OrderStatus } from '../../models/order-status.enum';
 
 // Constants
 const DEFAULT_PLACEHOLDER_IMAGE = '/vacuna.jpg';
 
-// Enums
-export enum OrderStatus {
-  CART = 'cart',
-  ORDER_PLACED = 'order_placed',
-  PENDING = 'pending',
-  PENDING_PAYMENT = 'pending_payment',
-  PREPARING = 'preparing',
-  DELIVERY = 'delivery',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
-}
+// Re-exported for backward compatibility with existing imports (e.g. specs)
+export { OrderStatus };
 
 // Interfaces
 export interface OrderProduct {

@@ -9,6 +9,7 @@ import { AuthService } from '../../services/auth.service';
 import { DialogService } from '../../services/dialog.service';
 import { ProductService } from '../../services/product.service';
 import { Product } from '../../services/models/product.models';
+import { CartItem } from '../../models/cart-item.model';
 
 // Constants
 const TAX_RATE = 0.08;
@@ -17,22 +18,6 @@ const DEFAULT_PRODUCT_IMAGE = '/vacuna.jpg';
 const CART_REFRESH_INTERVAL = 5000;
 
 // Interfaces
-export interface CartItem {
-  id: number;
-  name: string;
-  price: number;
-  discountedPrice?: number;
-  quantity: number;
-  category: string;
-  image?: string;
-  description?: string;
-  itemId?: number; // Backend item ID for API calls
-  productId?: number; // Product ID for backend
-  stock?: number;
-  previousPrice?: number;
-  priceChanged?: boolean;
-}
-
 interface CartSummary {
   subtotal: number;
   totalItems: number;

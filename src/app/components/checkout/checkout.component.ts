@@ -8,20 +8,9 @@ import { FormsModule } from '@angular/forms';
 import { DialogService } from '../../services/dialog.service';
 import { BillingInformationService } from '../../services/billing-information.service';
 import { BillingInformation, BillingInformationInput } from '../../services/models/billing-information.model';
+import { CartItem } from '../../models/cart-item.model';
 
 const TAX_RATE = 0.08;
-export interface CartItem {
-  id: number;
-  name: string;
-  price: number;
-  discountedPrice?: number;
-  quantity: number;
-  category: string;
-  image?: string;
-  description?: string;
-  itemId?: number;
-  productId?: number;
-}
 
 export interface SummaryItem {
   id?: number;
