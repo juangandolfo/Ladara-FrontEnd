@@ -5,10 +5,7 @@ import { Subject, takeUntil, forkJoin, EMPTY, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { OrderService } from '../../services/order.service';
 import { OrderStatus } from '../../models/order-status.enum';
-import { APP_CONFIG } from '../../config/app.config';
-
-// Constants
-const DEFAULT_PLACEHOLDER_IMAGE = APP_CONFIG.DEFAULT_PRODUCT_IMAGE;
+import { normalizeProductImage } from '../../utils/image-price.utils';
 
 // Re-exported for backward compatibility with existing imports (e.g. specs)
 export { OrderStatus };
@@ -242,22 +239,7 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
   }
 
   getProductImage(product: OrderProduct): string {
-    const safeImage = product?.image?.trim();
-
-    if (!safeImage) {
-      return DEFAULT_PLACEHOLDER_IMAGE;
-    }
-
-    if (
-      safeImage.startsWith('http://') ||
-      safeImage.startsWith('https://') ||
-      safeImage.startsWith('/') ||
-      safeImage.startsWith('data:')
-    ) {
-      return safeImage;
-    }
-
-    return `/${safeImage.replace(/^\.?\//, '')}`;
+    return normalizeProductImage(product?.image);
   }
 
   // Navigation Methods

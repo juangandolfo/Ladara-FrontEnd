@@ -10,6 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { DialogService } from '../../services/dialog.service';
 import { APP_CONFIG } from '../../config/app.config';
 import { BrowserStorageService } from '../../services/browser-storage.service';
+import { normalizeProductImage } from '../../utils/image-price.utils';
 
 // Constants
 const DEFAULT_ITEMS_PER_PAGE = 4;
@@ -17,7 +18,6 @@ const SEARCH_DEBOUNCE_TIME = 300;
 const TAX_RATE = APP_CONFIG.TAX_RATE;
 const MAX_VISIBLE_PAGES = 7;
 const ALL_CATEGORIES = 'Todas';
-const DEFAULT_PRODUCT_IMAGE = APP_CONFIG.DEFAULT_PRODUCT_IMAGE;
 
 // Interfaces
 interface ProductFilters {
@@ -461,26 +461,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   getProductImage(product: Product | null | undefined): string {
-    return this.normalizeProductImage(product?.image);
-  }
-
-  private normalizeProductImage(image?: string | null): string {
-    const safeImage = image?.trim();
-
-    if (!safeImage) {
-      return DEFAULT_PRODUCT_IMAGE;
-    }
-
-    if (
-      safeImage.startsWith('http://') ||
-      safeImage.startsWith('https://') ||
-      safeImage.startsWith('/') ||
-      safeImage.startsWith('data:')
-    ) {
-      return safeImage;
-    }
-
-    return `/${safeImage.replace(/^\.?\//, '')}`;
+    return normalizeProductImage(product?.image);
   }
 
   // Private Helper Methods
@@ -585,7 +566,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           const products = Array.isArray(response?.data) ? response.data : [];
           const normalizedProducts = products.map(product => ({
             ...product,
-            image: this.normalizeProductImage(product.image)
+            image: normalizeProductImage(product.image)
           }));
 
           this.products.set(normalizedProducts);

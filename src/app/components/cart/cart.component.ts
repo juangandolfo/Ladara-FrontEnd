@@ -12,11 +12,11 @@ import { Product } from '../../services/models/product.models';
 import { CartItem } from '../../models/cart-item.model';
 import { APP_CONFIG, isValidCouponCode } from '../../config/app.config';
 import { CartCalculationService } from '../../services/cart-calculation.service';
+import { normalizeProductImage, parseOptionalPrice, parsePrice } from '../../utils/image-price.utils';
 
 // Constants
 const TAX_RATE = APP_CONFIG.TAX_RATE;
 const MIN_QUANTITY = 1;
-const DEFAULT_PRODUCT_IMAGE = APP_CONFIG.DEFAULT_PRODUCT_IMAGE;
 const CART_REFRESH_INTERVAL = 5000;
 
 // Interfaces
@@ -233,7 +233,7 @@ export class CartComponent implements OnInit, OnDestroy {
           this.activeCoupon.set('');
           return;
         }
-        const discount = this.parseOptionalPrice(data?.discountAmount ?? data?.discount);
+        const discount = parseOptionalPrice(data?.discountAmount ?? data?.discount);
         if (discount == null || discount <= 0) {
           this.couponError.set('El servidor devolvió un descuento inválido');
           return;
@@ -356,8 +356,8 @@ export class CartComponent implements OnInit, OnDestroy {
 
     const currentOrder = orders[0];
     this.orderId = currentOrder.id;
-    this.envio.set(Math.max(0, this.parsePrice(currentOrder.shippingCost)));
-    this.authoritativeTotal.set(this.parseOptionalPrice(currentOrder.total));
+    this.envio.set(Math.max(0, parsePrice(currentOrder.shippingCost)));
+    this.authoritativeTotal.set(parseOptionalPrice(currentOrder.total));
 
     const serverItems = currentOrder.items || [];
     this.reconcilePendingQuantities(serverItems);
@@ -388,39 +388,20 @@ export class CartComponent implements OnInit, OnDestroy {
     return orderItems.map(item => ({
       id: item.id,
       name: item.product.name,
-      price: this.parsePrice(item.product.price),
-      previousPrice: this.parseOptionalPrice(item.price) !== this.parsePrice(item.product.price)
-        ? this.parseOptionalPrice(item.price) ?? undefined
+      price: parsePrice(item.product.price),
+      previousPrice: parseOptionalPrice(item.price) !== parsePrice(item.product.price)
+        ? parseOptionalPrice(item.price) ?? undefined
         : undefined,
-      priceChanged: this.parseOptionalPrice(item.price) != null &&
-        this.parseOptionalPrice(item.price) !== this.parsePrice(item.product.price),
-      stock: this.parseOptionalPrice(item.product.stock) ?? undefined,
+      priceChanged: parseOptionalPrice(item.price) != null &&
+        parseOptionalPrice(item.price) !== parsePrice(item.product.price),
+      stock: parseOptionalPrice(item.product.stock) ?? undefined,
       quantity: item.quantity,
       category: item.product.category,
-      image: this.normalizeProductImage(item.product.image),
+      image: normalizeProductImage(item.product.image),
       description: item.product.description,
       itemId: item.id,
       productId: item.product.id
     }));
-  }
-
-  private normalizeProductImage(image?: string | null): string {
-    const safeImage = image?.trim();
-
-    if (!safeImage) {
-      return DEFAULT_PRODUCT_IMAGE;
-    }
-
-    if (
-      safeImage.startsWith('http://') ||
-      safeImage.startsWith('https://') ||
-      safeImage.startsWith('/') ||
-      safeImage.startsWith('data:')
-    ) {
-      return safeImage;
-    }
-
-    return `/${safeImage.replace(/^\.?\//, '')}`;
   }
 
   private queueQuantityUpdate(item: CartItem, quantity: number): void {
@@ -500,16 +481,6 @@ export class CartComponent implements OnInit, OnDestroy {
       }
       return total;
     }, 0);
-  }
-
-  private parsePrice(price?: string | number): number {
-    const parsed = typeof price === 'string' ? parseFloat(price) : price;
-    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  private parseOptionalPrice(price?: string | number): number | null {
-    const parsed = typeof price === 'string' ? parseFloat(price) : price;
-    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : null;
   }
 
   private handleError(message: string, error?: any): void {
